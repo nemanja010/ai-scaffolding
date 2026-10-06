@@ -200,7 +200,7 @@ Agent skills are modular execution workflows vendored into `.agents/skills/` and
 
 - **Process & Planning**: `brainstorming`, `writing-plans`, `planning-and-task-breakdown`, `incremental-implementation`
 - **Execution & Quality**: `test-driven-development`, `systematic-debugging`, `doubt-driven-development`, `verification-before-completion`
-- **Review & Collaboration**: `code-review-and-quality`, `receiving-code-review`, `requesting-code-review`, `interview-me`, `grill-me`
+- **Review & Collaboration**: `code-review-and-quality`, `receiving-code-review`, `requesting-code-review`, `grill-with-docs`, `grilling`, `domain-modeling`
 - **Architecture & Versioning**: `architectural-decision-records`, `c4-diagrams`, `git-workflow-and-versioning`, `using-git-worktrees`, `finishing-a-development-branch`
 - **Context & Optimization**: `context-engineering`, `performance-optimization`, `observability-and-instrumentation`
 - **Frontend Architecture**: `angular-developer`

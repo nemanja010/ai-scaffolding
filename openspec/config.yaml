@@ -3,7 +3,7 @@ schema: intent-driven
 rules:
   proposal:
     - Can use brainstorming skill to explore user intent, domain boundaries, and requirements when helpful
-    - Can use grill-with-docs skill (or grill-me) to stress-test scope, decisions, and persist ubiquitous domain language into glossary/
+    - Can use grill-with-docs skill (or grilling) to stress-test scope, decisions, and persist ubiquitous domain language into glossary/
   design:
     - Must use c4-diagrams skill
   adr:
@@ -11,4 +11,4 @@ rules:
   specs:
     - Must use gherkin-authoring skill
   tasks:
-    - Must use writing-plans skill
+    - Must use writing-plans skill for task granularity and ordering, but write the result into tasks.md using the schema checkbox format (never docs/superpowers/plans/) and do not commit

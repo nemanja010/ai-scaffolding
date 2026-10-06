@@ -9,7 +9,7 @@ Implement the `ResolveFn` type.
 ```ts
 export const userResolver: ResolveFn<User> = (route, state) => {
   const userService = inject(UserService);
-  const id = route.paramMap.get("id")!;
+  const id = route.paramMap.get('id')!;
   return userService.getUser(id);
 };
 ```
@@ -33,9 +33,9 @@ Add the resolver under the `resolve` key.
 ### 1. Via `ActivatedRoute` (Traditional)
 
 ```ts
-private route = inject(ActivatedRoute);
-data = toSignal(this.route.data);
-user = computed(() => this.data().user);
+private readonly route = inject(ActivatedRoute);
+protected readonly data = toSignal(this.route.data);
+protected readonly user = computed(() => this.data().user);
 ```
 
 ### 2. Via Component Inputs (Modern)
@@ -60,7 +60,7 @@ Navigation is blocked if a resolver fails.
 ```ts
 return userService
   .get(id)
-  .pipe(catchError(() => of(new RedirectCommand(router.parseUrl("/error")))));
+  .pipe(catchError(() => of(new RedirectCommand(router.parseUrl('/error')))));
 ```
 
 ## Best Practices

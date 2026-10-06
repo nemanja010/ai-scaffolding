@@ -158,6 +158,6 @@ To prevent semantic drift across code, specifications, and architecture decision
 - **Business Terminology (`glossary/business.md`)**: Defines user-facing domain concepts, entities, and workflows.
 - **Technical Terminology (`glossary/technical.md`)**: Defines architectural patterns, infrastructure components, and engineering standards.
 - **Workflow Integration**:
-  - During the proposal and design phases, agents and developers use the `grill-with-docs` skill (or `grill-me`) to clarify ambiguous concepts.
+  - During the proposal and design phases, agents and developers use the `grill-with-docs` skill (or `grilling`) to clarify ambiguous concepts.
   - Any new domain term introduced or refined during an OpenSpec change must be recorded in `glossary/business.md` or `glossary/technical.md`.
   - Specs and code must use the exact terms defined in the glossary (avoiding forbidden synonyms listed in the *Avoid* column).

@@ -29,7 +29,7 @@ artifacts:
       Always inspect `openspec/domains.yaml` and `openspec/specs/` before filling this in.
       Each capability listed here must use the `<domain>/<capability>` path format.
 
-      Tip: You can use the `brainstorming` skill or `grill-with-docs` (or `grill-me`) to explore requirements,
+      Tip: You can use the `brainstorming` skill or `grill-with-docs` (or `grilling`) to explore requirements,
       clarify scope, stress-test decisions, and persist ubiquitous domain language into `glossary/` before drafting this proposal.
 
 

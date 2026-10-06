@@ -1,6 +1,6 @@
 ---
 name: incremental-implementation
-description: Delivers changes incrementally. Use when implementing any feature or change that touches more than one file. Use when you're about to write a large amount of code at once, or when a task feels too big to land in one step.
+description: Delivers changes incrementally in thin, verifiable slices. Use when implementing any feature or change that touches more than one file, or when picking up the next task from a plan. Use when rolling a change out behind a feature flag, when you're about to write a large amount of code at once, or when a task feels too big to land in one step.
 ---
 
 # Incremental Implementation
@@ -93,7 +93,6 @@ If Slice 1 fails, you discover it before investing in Slices 2 and 3.
 Before writing any code, ask: "What is the simplest thing that could work?"
 
 After writing code, review it against these checks:
-
 - Can this be done in fewer lines?
 - Are these abstractions earning their complexity?
 - Would a staff engineer look at this and say "why didn't you just..."?
@@ -118,7 +117,6 @@ Three similar lines of code is better than a premature abstraction. Implement th
 Touch only what the task requires.
 
 Do NOT:
-
 - "Clean up" code adjacent to your change
 - Refactor imports in files you're not modifying
 - Remove comments you don't fully understand
@@ -152,7 +150,7 @@ If a feature isn't ready for users but you need to merge increments:
 
 ```typescript
 // Feature flag for work-in-progress
-const ENABLE_TASK_SHARING = process.env.FEATURE_TASK_SHARING === "true";
+const ENABLE_TASK_SHARING = process.env.FEATURE_TASK_SHARING === 'true';
 
 if (ENABLE_TASK_SHARING) {
   // New sharing UI
@@ -192,21 +190,21 @@ When directing an agent to implement incrementally:
 Start with just the database schema change and the API endpoint.
 Don't touch the UI yet — we'll do that in the next increment.
 
-After implementing, run `npm test` and `npm run build` to verify
-nothing is broken."
+After implementing, run the repository's test and build commands to
+verify nothing is broken."
 ```
 
 Be explicit about what's in scope and what's NOT in scope for each increment.
 
 ## Increment Checklist
 
-After each increment, verify:
+After each increment, verify with the repository's own commands (see the test-driven-development skill's Discover the Stack First section):
 
 - [ ] The change does one thing and does it completely
-- [ ] All existing tests still pass (`npm test`)
-- [ ] The build succeeds (`npm run build`)
-- [ ] Type checking passes (`npx tsc --noEmit`)
-- [ ] Linting passes (`npm run lint`)
+- [ ] All existing tests still pass (the repository's test command: `npm test`, `./gradlew test`, `pytest`, ...)
+- [ ] The build succeeds (the repository's build command)
+- [ ] Type checking passes, where the stack has one (`npx tsc --noEmit`, `mypy`, ...)
+- [ ] Linting passes (the repository's lint command)
 - [ ] The new functionality works as expected
 - [ ] The change is committed with a descriptive message
 
@@ -214,13 +212,13 @@ After each increment, verify:
 
 ## Common Rationalizations
 
-| Rationalization                                      | Reality                                                                                                                                                     |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "I'll test it all at the end"                        | Bugs compound. A bug in Slice 1 makes Slices 2-5 wrong. Test each slice.                                                                                    |
-| "It's faster to do it all at once"                   | It _feels_ faster until something breaks and you can't find which of 500 changed lines caused it.                                                           |
-| "These changes are too small to commit separately"   | Small commits are free. Large commits hide bugs and make rollbacks painful.                                                                                 |
-| "I'll add the feature flag later"                    | If the feature isn't complete, it shouldn't be user-visible. Add the flag now.                                                                              |
-| "This refactor is small enough to include"           | Refactors mixed with features make both harder to review and debug. Separate them.                                                                          |
+| Rationalization | Reality |
+|---|---|
+| "I'll test it all at the end" | Bugs compound. A bug in Slice 1 makes Slices 2-5 wrong. Test each slice. |
+| "It's faster to do it all at once" | It *feels* faster until something breaks and you can't find which of 500 changed lines caused it. |
+| "These changes are too small to commit separately" | Small commits are free. Large commits hide bugs and make rollbacks painful. |
+| "I'll add the feature flag later" | If the feature isn't complete, it shouldn't be user-visible. Add the flag now. |
+| "This refactor is small enough to include" | Refactors mixed with features make both harder to review and debug. Separate them. |
 | "Let me run the build command again just to be sure" | After a successful run, repeating the same command adds nothing unless the code has changed since. Run it again after subsequent edits, not as reassurance. |
 
 ## Red Flags
@@ -248,4 +246,4 @@ After completing all increments for a task:
 
 ## See Also
 
-Per-increment verification is the local check. Before declaring a task done, apply the project-wide Definition of Done as the final gate, the standing bar every increment clears regardless of the task. See `references/definition-of-done.md`.
+Per-increment verification is the local check. Before declaring a task done, apply the project-wide Definition of Done as the final gate, the standing bar every increment clears regardless of the task. See `../../references/definition-of-done.md`.

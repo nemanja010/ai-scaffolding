@@ -168,9 +168,9 @@ Create agent scratch directories with `.keep` sentinels and `README.md` explaini
 
 - [x] **Step 1: Copy selected general engineering and Angular skills**
 Transfer:
-- Superpowers skills (`brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`, `test-driven-development`, `systematic-debugging`, `verification-before-completion`, `finishing-a-development-branch`, `requesting-code-review`, `receiving-code-review`, `using-git-worktrees`, `using-superpowers`, `writing-skills`, `dispatching-parallel-agents`)
-- Addy Osmani skills (`api-and-interface-design`, `browser-testing-with-devtools`, `ci-cd-and-automation`, `code-review-and-quality`, `code-simplification`, `context-engineering`, `deprecation-and-migration`, `documentation-and-adrs`, `doubt-driven-development`, `git-workflow-and-versioning`, `idea-refine`, `incremental-implementation`, `interview-me`, `observability-and-instrumentation`, `performance-optimization`, `planning-and-task-breakdown`, `security-and-hardening`, `shipping-and-launch`, `source-driven-development`, `spec-driven-development`)
-- Architecture/Analysis skills: `c4-diagrams`, `gherkin-authoring`, `architectural-decision-records`, `glossary`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`
+- Superpowers skills (`brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`, `test-driven-development`, `systematic-debugging`, `verification-before-completion`, `finishing-a-development-branch`, `requesting-code-review`, `receiving-code-review`, `using-git-worktrees`, `writing-skills`, `dispatching-parallel-agents`)
+- Addy Osmani skills (`api-and-interface-design`, `browser-testing-with-devtools`, `ci-cd-and-automation`, `code-review-and-quality`, `code-simplification`, `context-engineering`, `deprecation-and-migration`, `doubt-driven-development`, `git-workflow-and-versioning`, `incremental-implementation`, `observability-and-instrumentation`, `performance-optimization`, `planning-and-task-breakdown`, `security-and-hardening`, `shipping-and-launch`, `source-driven-development`, `spec-driven-development`)
+- Architecture/Analysis skills: `c4-diagrams`, `gherkin-authoring`, `architectural-decision-records`, `glossary`, `grill-with-docs`, `grilling`, `domain-modeling`, `handoff`, `improve-codebase-architecture`
 - Tooling/Frontend: `ccc`, `find-skills`, `angular-developer`
 Exclude: proprietary/domain-specific skills (`custom-properties`, `generate-changelog`, etc.).
 

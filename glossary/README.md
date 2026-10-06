@@ -33,7 +33,7 @@ Both glossaries follow a strict four-column tabular structure:
 ## 3. Maintenance & AI Agent Guidelines
 
 ### Capturing Terms Early
-- During the change proposal and technical design phases, developers and AI agents use the `grill-with-docs` skill (or `grill-me`) to explore user intent, clarify requirements, and stress-test assumptions.
+- During the change proposal and technical design phases, developers and AI agents use the `grill-with-docs` skill (or `grilling`) to explore user intent, clarify requirements, and stress-test assumptions.
 - When new domain concepts or architectural patterns emerge during these sessions, immediately record them in `business.md` or `technical.md`.
 
 ### Single Source of Truth
