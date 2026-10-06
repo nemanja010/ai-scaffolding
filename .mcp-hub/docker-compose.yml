@@ -1,0 +1,38 @@
+# Pinned explicitly so the Compose project name stays "mcphub" regardless of
+# directory location. This ensures consistent named volume naming (mcphub_cocoindex-data).
+name: mcphub
+
+services:
+  mcphub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcphub
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount the codebase to analyze. Path comes from WORKSPACE_ROOT
+      # environment variable (defaults to the parent directory if unset).
+      - ${WORKSPACE_ROOT:-..}:/workspace
+      # Mount the MCP configuration (writable - dashboard/API updates entries at runtime)
+      - ./mcp_settings.json:/app/mcp_settings.json
+      # Persist admin credentials, keys, and runtime state across restarts
+      - ./data:/app/data
+      # cocoindex-code index databases - isolated on a native Docker volume.
+      # Writing thousands of small SQLite transactions through host bind-mount
+      # translation layers is slow; native volume storage optimizes indexing throughput.
+      - cocoindex-data:/db-files
+    environment:
+      NODE_ENV: production
+      # Optional: set a static admin password instead of the randomly generated one
+      # ADMIN_PASSWORD: change-me
+    networks:
+      - mcphub-network
+
+networks:
+  mcphub-network:
+    driver: bridge
+
+volumes:
+  cocoindex-data:

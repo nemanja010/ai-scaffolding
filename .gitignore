@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build and distribution outputs
+dist/
+build/
+out/
+coverage/
+.turbo/
+.nx/
+.angular/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vscode/*
+!.vscode/mcp.json
+!.vscode/settings.json
+
+# Docker volumes and local MCP data
+.mcp-hub/data/
+.mcp-hub/cocoindex-data/
+.mcp-hub/mcp_settings.json
+
+# Agent scratch workspaces
+.agent-workspace/*/active-task.md
+.agent-workspace/*/history/*
+!.agent-workspace/**/.keep
+
+# SDD scratch and planning artifacts
+.superpowers/
+
+# OS metadata
+.DS_Store
+Thumbs.db

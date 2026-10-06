@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "LocalMcpHub": {
+      "url": "http://localhost:3000/mcp",
+      "type": "http"
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest", "--no-usage-statistics"],
+      "type": "stdio"
+    },
+    "repomix": {
+      "command": "npx",
+      "args": ["-y", "repomix@latest", "--mcp"],
+      "type": "stdio"
+    }
+  },
+  "inputs": []
+}

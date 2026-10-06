@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "local-mcp-hub": {
+      "url": "http://localhost:3000/mcp"
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest", "--no-usage-statistics"]
+    },
+    "repomix": {
+      "command": "npx",
+      "args": ["-y", "repomix@latest", "--mcp"]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+# ==============================================================================
+# OpenSpec Domain & Capability Registry
+# ==============================================================================
+#
+# This file declares the canonical architectural domains and capabilities for this
+# repository. It establishes bounded contexts and governs the placement of living
+# specifications under `openspec/specs/<domain>/<capability>/spec.md`.
+#
+# DOMAIN vs. CAPABILITY:
+# ----------------------
+# - DOMAIN: A high-level bounded context representing a major architectural partition
+#   or subsystem. Domains define clear systemic boundaries and responsibilities.
+#   Adding a new domain is an architectural boundary change affecting the entire
+#   repository and team.
+#
+# - CAPABILITY: A cohesive behavioral slice within a domain. Exactly one capability
+#   maps to one living specification file (`openspec/specs/<domain>/<capability>/spec.md`).
+#   Capabilities group related requirements and Gherkin scenarios.
+#
+# RULES FOR AI AGENTS & DEVELOPERS:
+# ---------------------------------
+# 1. Decisive Capability Extension: When introducing features or bug fixes, always
+#    prefer targeting an existing capability in this registry. Inspect the living
+#    spec at `openspec/specs/<domain>/<capability>/spec.md` and create a delta spec.
+# 2. New Capability in Existing Domain: If the change introduces a distinct new
+#    responsibility within an existing domain, add the capability to this file and
+#    scaffold its living spec.
+# 3. High-Friction Gate for New Domains: Domains cover the foundational system
+#    architecture. If a change appears not to fit an existing domain, DO NOT add a
+#    domain silently. Alert the developer, suggest the closest existing domain,
+#    and require explicit architectural approval.
+#
+# For full domain lifecycle rules, see `openspec/GOVERNANCE.md`.
+# For ubiquitous domain terminology, see `glossary/`.
+# ==============================================================================
+
+version: 1
+
+domains:
+  core-platform:
+    name: "Core Platform"
+    description: "Foundational infrastructure, storage abstractions, configuration, and security services"
+    capabilities:
+      - id: configuration-management
+        description: "Application configuration, environment profiles, and dynamic property resolution"
+      - id: data-persistence
+        description: "Data access layer, unit of work, repository patterns, and schema migrations"
+      - id: identity-access
+        description: "Authentication, authorization, role-based access control, and session lifecycle"
+
+  api-services:
+    name: "API & Backend Services"
+    description: "RESTful endpoints, external API gateways, and asynchronous event messaging pipelines"
+    capabilities:
+      - id: service-endpoints
+        description: "REST/HTTP controllers, request validation, serialization, and status negotiation"
+      - id: event-messaging
+        description: "Event publishing, pub/sub topics, message queues, and async worker dispatch"
+
+  web-client:
+    name: "Web Client Applications"
+    description: "Frontend single-page applications, UI component libraries, and client-side state"
+    capabilities:
+      - id: app-shell
+        description: "Root navigation, routing, layout containers, and application initialization"
+      - id: ui-components
+        description: "Reusable design system components, forms, feedback dialogs, and tabular views"

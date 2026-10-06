@@ -1,0 +1,59 @@
+{
+  "mcpServers": {
+    "codebase-memory": {
+      "command": "codebase-memory-mcp",
+      "args": [],
+      "env": {
+        "CBM_ALLOWED_ROOT": "/workspace"
+      }
+    },
+    "codespelunker": {
+      "command": "cs",
+      "args": ["--mcp", "--dir", "/workspace"]
+    },
+    "cocoindex_code": {
+      "command": "sh",
+      "args": ["-c", "cd /workspace && exec ccc mcp"],
+      "env": {
+        "COCOINDEX_DISABLE_USAGE_TRACKING": "1",
+        "COCOINDEX_CODE_DB_PATH_MAPPING": "/workspace=/db-files"
+      }
+    },
+    "lsp": {
+      "command": "agent-lsp",
+      "args": [
+        "typescript:typescript-language-server,--stdio",
+        "html:vscode-html-language-server,--stdio",
+        "sql:sqls"
+      ]
+    },
+    "basic-memory": {
+      "command": "uvx",
+      "args": ["basic-memory", "mcp"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+    }
+  },
+  "systemConfig": {
+    "oauthServer": {
+      "enabled": true,
+      "accessTokenLifetime": 3600,
+      "refreshTokenLifetime": 1209600,
+      "authorizationCodeLifetime": 300,
+      "requireClientSecret": false,
+      "allowedScopes": ["read", "write"],
+      "requireState": false,
+      "dynamicRegistration": {
+        "enabled": true,
+        "allowedGrantTypes": ["authorization_code", "refresh_token"],
+        "requiresAuthentication": false
+      }
+    }
+  },
+  "users": [],
+  "bearerKeys": [],
+  "oauthClients": [],
+  "oauthTokens": []
+}
