@@ -105,7 +105,7 @@ Add `openspec/specs/core-platform/configuration-management/spec.md` as an exampl
 - Create: `D:/code/ai-scaffolding/.opencode/skills/openspec-*/SKILL.md` (all 9 OpenSpec workflow skills)
 
 - [x] **Step 1: Write `.opencode/package.json` and agent definitions**
-Set up `@opencode-ai/plugin` and the two adversarial subagents (`adversarial-author.md` and `adversarial-reviewer.md`).
+Set up `@opencode/plugin` and the two adversarial subagents (`adversarial-author.md` and `adversarial-reviewer.md`).
 
 - [x] **Step 2: Copy and sanitize OpenSpec slash commands in `.opencode/commands/`**
 Install `opsx-propose.md`, `opsx-new.md`, `opsx-explore.md`, `opsx-continue.md`, `opsx-apply.md`, `opsx-verify.md`, `opsx-archive.md`, `opsx-sync.md`, `opsx-bulk-apply.md`.

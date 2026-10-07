@@ -59,7 +59,7 @@ Whenever modifying instructions, prompts, specialist agents, skills, or tool con
     npx skills check
     npx skills update
     ```
-  - Ensure skill targets include `@opencode-ai/plugin` and GitHub Copilot directories.
+  - Ensure skill targets include `@opencode/plugin` and GitHub Copilot directories.
 
 ### 5. Zero Product Leakage Audit
 - Whenever updating instructions, prompts, agents, or templates, run a verification check to ensure no company-specific, legacy product, or proprietary domain terminology is introduced.
