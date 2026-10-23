@@ -297,3 +297,7 @@ apply:
     Must use test-driven-development skill when implementing features or fixes.
     Must use verification-before-completion skill before marking any task complete.
     Pause if you hit blockers or need clarification.
+    When all tracked tasks are complete, advise the developer of next steps before archiving:
+    1. Run verification (/opsx-verify or /opsx:verify) to validate spec and scenario coverage.
+    2. (Optional) Run cross-model PR audit (/opsx-pr or /opsx:pr <change-name>) to generate pr.md and format PR creation commands.
+    3. Proceed to archive (/opsx-archive or /opsx:archive <change-name>) once approved.

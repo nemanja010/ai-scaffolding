@@ -41,6 +41,8 @@ All Antigravity sessions must align with the core conventions from `AGENTS.md`:
   - `openspec list` — View active changes and status.
   - `openspec new change <name>` — Scaffold a new change.
   - `openspec schema validate intent-driven` — Validate schema integrity.
+  - `/opsx:pr <name>` — Run cross-model PR audit, write `pr.md`, and format PR commands.
+  - `/opsx:review-pr <id|branch>` — Review a remote PR locally by ID or branch name.
 - **Skills Operations**:
   - `npx skills check` — Check installed skills status.
   - `npx skills update` — Update skill definitions.

@@ -37,6 +37,11 @@ Before executing any task, ensure full alignment with `AGENTS.md`:
   ```bash
   npx openspec schema validate intent-driven
   ```
+- **PR Audit & Review Workflow**:
+  ```bash
+  /opsx:pr <change-name>        # Run cross-model PR audit and format PR creation commands
+  /opsx:review-pr <id|branch>   # Fetch and review a remote PR locally
+  ```
 
 ### Skills Management
 - **Audit Installed Skills**:

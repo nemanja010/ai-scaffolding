@@ -1,0 +1,32 @@
+description = "Fetch and review a remote PR locally by PR ID or branch"
+
+prompt = """
+Review Pull Request: {{args}}
+
+**Steps**
+
+1. **Checkout PR Branch Locally**
+   Ask which hosting platform applies if it is not obvious, then run the matching command:
+   - GitHub: `gh pr checkout {{args}}`
+   - GitLab: `glab mr checkout {{args}}`
+   - Azure Repos: `az repos pr checkout --id {{args}}`
+   - Generic Git: `git checkout {{args}}`
+
+   The review evaluates the committed PR content, not unrelated local working-tree changes.
+
+2. **Inspect Filtered Diff Against Base**
+   ```bash
+   BASE=origin/main
+   git diff --stat "$BASE"...HEAD -- . ':!*package-lock.json' ':!*.generated.*' ':!*/dist/*' ':!dist/*' ':!*.map'
+   git diff "$BASE"...HEAD -- . ':!*package-lock.json' ':!*.generated.*' ':!*/dist/*' ':!dist/*' ':!*.map'
+   ```
+
+3. **Run the Review in Isolated Context**
+   Spawn a subagent with a different model family if this harness supports it; otherwise start a fresh session with a different model selected. State which model performed the review.
+   Analyze the changes against project conventions, security standards, and performance invariants.
+   Categorize findings by `[CRITICAL]`, `[WARNING]`, `[SUGGESTION]`.
+
+4. **Output Findings & Suggested Review Vote**
+   Output the review summary in chat with specific `file:line` citations.
+   Display suggested CLI vote commands (e.g. `gh pr review`, `glab mr note`, or `az repos pr set-vote`). Do NOT submit the review or vote yourself.
+"""

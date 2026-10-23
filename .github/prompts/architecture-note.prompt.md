@@ -68,7 +68,7 @@ Create the file at `docs/updates/YYYY-MM-DD-<slug>.md` using this standard templ
 title: "Update: <Topic Title> (<YYYY-MM-DD>)"
 description: <One sentence summarizing what changed and what it achieves. Max 200 characters.>
 tags: [update, <2–5 lowercase relevant tags: architecture, frontend, backend, security, performance, data-access, state>]
-related: "<[[docs/architecture-design.md]], [[openspec/specs/...]]>"
+related: "<[[openspec/specs/...]], [[openspec/changes/...]]>"
 date: <YYYY-MM-DD>
 scope: "<Comma-separated list of affected apps/libs>"
 ---

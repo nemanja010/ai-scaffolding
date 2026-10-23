@@ -1,0 +1,49 @@
+description = "Run cross-model PR audit, write pr.md, and output Pull Request commands"
+
+prompt = """
+Execute the cross-model PR review for OpenSpec change: {{args}}
+
+The review compares the **current working tree** against the base ref, which is `origin/main` unless the developer names a different base as a second argument. Committed, staged, unstaged, and untracked changes all count; the developer does not commit or push before this audit.
+
+**Store selection:** If the user names a store or the work lives in one, pass `--store <id>` to any `openspec` commands. Without a store, commands act on the nearest local `openspec/` root.
+
+**Steps**
+
+1. **Select the change**
+   If a change name is provided, use it. Otherwise infer from context or discover via `openspec list --json`.
+   Always announce: "Running PR audit for change: <name>"
+
+2. **Collect the working-tree diff**
+   ```bash
+   BASE=origin/main
+   git diff --stat "$BASE" -- . ':!*package-lock.json' ':!*.generated.*' ':!*/dist/*' ':!dist/*' ':!*.map'
+   git diff "$BASE" -- . ':!*package-lock.json' ':!*.generated.*' ':!*/dist/*' ':!dist/*' ':!*.map'
+   git ls-files --others --exclude-standard -- . ':!*package-lock.json' ':!*.generated.*' ':!*/dist/*' ':!dist/*' ':!*.map'
+   ```
+   Read every untracked file returned by the last command from disk; `git diff` cannot show them, but they are part of the change.
+
+3. **Read OpenSpec Planning Artifacts**
+   Read all change artifacts in `openspec/changes/<name>/`:
+   - `proposal.md`
+   - `specs/**/*.md`
+   - `design.md`
+   - `adr.md` and any referenced files under `adr/`
+   - `tasks.md`
+
+4. **Run the Audit in Isolated Context**
+   Do not review inline in the authoring session. Spawn a subagent with a different model family if this harness supports it; otherwise start a fresh session, select a different model, and give it only the artifacts and the filtered diff from step 2. State in the output which model performed the audit. If isolation is impossible, say so explicitly instead of claiming a cross-model review.
+   - **Axis 1 (Spec Compliance)**: Verify every Gherkin scenario has authentic test coverage. Reject tautological assertions. Verify adherence to ADR constraints. Check for scope creep.
+   - **Axis 2 (Standards & Security)**: Check for parameterized queries, auth guards, Fowler smells, N+1 queries, performance bottlenecks, and file sizing.
+   - Categorize issues by priority: `[CRITICAL]`, `[WARNING]`, `[SUGGESTION]`.
+
+5. **Write Audit Report & Format Commands**
+   Write the structured report to `openspec/changes/<name>/pr.md` using the template at `openspec/schemas/intent-driven/templates/pr.md`:
+   - If any `[CRITICAL]` issue: Status is `BLOCKED BY CRITICAL FINDINGS`.
+   - If zero `[CRITICAL]` issues: Status is `READY FOR PR`.
+   - Format conventional PR title (`type(scope): concise description`) and markdown description.
+   - Format ready-to-run commands for `git push -u origin HEAD` and platform options (GitHub `gh`, GitLab `glab`, or Azure Repos `az`).
+
+6. **Output Summary in Chat**
+   - If **BLOCKED**: Summarize critical findings with `file:line` citations and advise developer to resolve via `/opsx:apply <name>`.
+   - If **READY**: Display formatted PR title, summary, and ready-to-run CLI commands. Do NOT execute git push or PR creation commands automatically.
+"""

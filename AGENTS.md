@@ -10,7 +10,7 @@ Canonical instruction anchor for all AI agents and harnesses operating in this r
 apps/                 ← Applications (web, mobile, service hosts)
 libs/                 ← Shared libraries (domain, data-access, ui, util)
 openspec/             ← Living specifications, domain catalog, and change proposals
-docs/                 ← Architecture decisions, system design, and guides
+docs/                 ← Project documentation, design notes, and guides
 .agents/              ← Managed engineering discipline and stack skills
 .agent-workspace/     ← Agent scratch state, resume tokens, and session history
 .mcp-hub/             ← Dockerized codebase intelligence MCP server
@@ -59,6 +59,7 @@ All agent scratch files and persistent session tokens are isolated under:
   - **Archived changes** reside flat under `openspec/changes/archive/YYYY-MM-DD-<name>/` with internal deltas at `specs/<domain>/<capability>/spec.md`.
   - **Decisive Capability Extension**: When a change clearly aligns with an existing capability in `openspec/domains.yaml`, target that capability and inspect the living spec. Do NOT prompt asking whether to create a new capability.
   - **High-Friction Gate for New Domains**: Domains define top-level architectural boundaries. Adding a new domain requires architectural consensus. The AI must warn the developer before introducing a new domain and suggest the closest existing domain from `openspec/domains.yaml`.
+- **Optional Cross-Model PR Audit**: After all tracked tasks are complete and verification passes, the developer may run the post-implementation audit (`/opsx-pr` in OpenCode and VS Code, `/opsx:pr` in Antigravity and Claude Code). It reviews the current working tree against `origin/main` (or a named base), writes `openspec/changes/<change>/pr.md`, and formats — but never executes — the PR creation commands. It is optional; `/opsx-archive` does not require it.
 
 ### 3. Git Commit Approval Gate
 

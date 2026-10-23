@@ -51,7 +51,7 @@ Before beginning work on a new inquiry:
 
 ### 4. Architectural Decision Records (ADRs)
 - Document non-trivial architectural decisions with explicit tradeoffs, alternatives considered, and consequences.
-- Standard location: `docs/adr/` (following MADR structure: Context, Decision Drivers, Considered Options, Decision Outcome, Pros and Cons).
+- Standard location: `adr/` at the repository root (following MADR structure: Context, Decision Drivers, Considered Options, Decision Outcome, Pros and Cons).
 
 ---
 

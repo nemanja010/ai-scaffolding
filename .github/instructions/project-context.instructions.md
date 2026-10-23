@@ -16,7 +16,7 @@ This document establishes the universal context, structural layout, and operatio
 apps/                 ← Deployable applications and host projects (web, mobile, backend services)
 libs/                 ← Shared libraries layered cleanly (domain, data-access, state, ui, utilities)
 openspec/             ← Living specifications, domain catalog, schema rules, and change proposals
-docs/                 ← Architecture designs, ADRs, updates, and setup documentation
+docs/                 ← Project documentation, update notes, and setup guides
 glossary/             ← Ubiquitous language definitions (business.md, technical.md)
 .agents/              ← Managed engineering discipline and stack skills
 .agent-workspace/     ← Agent scratch state, resume tokens, and session history

@@ -53,7 +53,7 @@ Clear summary of the user's prompt or architectural request.
 
 ## Files Modified
 - libs/core/package.json — defined public package entrypoints
-- docs/adrs/0004-core-library-extraction.md — initial draft
+- adr/0004-core-library-extraction.md — initial draft
 
 ## Key Decisions
 - Document constraints, tradeoffs, or rationale established during this session.
@@ -90,4 +90,4 @@ Exact next command or step to execute upon session resumption.
 ## Workspace Hygiene
 
 - **Do Not Pollute Application Code**: Never leave temporary agent notes, scratch files, or unreviewed drafts in source code directories (`apps/`, `libs/`, `docs/`).
-- **Single Source of Truth**: Persistent system specifications belong in `openspec/`, architectural records in `docs/adrs/`, and ubiquitous language in `glossary/`. Scratchpads in `.agent-workspace/` are disposable.
+- **Single Source of Truth**: Persistent system specifications belong in `openspec/`, architectural records in `adr/`, and ubiquitous language in `glossary/`. Scratchpads in `.agent-workspace/` are disposable.

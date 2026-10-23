@@ -152,8 +152,12 @@ Working on task 4/7: <task description>
 - [x] Task 2
 ...
 
-All tracked tasks are complete. Review or verify the change as appropriate
-before archiving. You can archive this change with `/opsx:archive`.
+All tracked tasks are complete.
+
+**Next Steps Before Archiving:**
+1. Verify implementation: `/opsx:verify <change-name>`
+2. (Optional) Run cross-model PR audit & prepare Pull Request: `/opsx:pr <change-name>`
+3. Archive change when approved: `/opsx:archive <change-name>`
 ```
 
 **Output On Pause (Issue Encountered)**

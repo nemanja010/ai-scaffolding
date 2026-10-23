@@ -37,7 +37,7 @@ coverage/
 .agent-workspace/*/history/*
 !.agent-workspace/**/.keep
 
-# SDD scratch and planning artifacts
+# Scratch output from vendored skills (brainstorming sessions, plan workspaces)
 .superpowers/
 
 # OS metadata

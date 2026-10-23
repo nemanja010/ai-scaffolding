@@ -31,10 +31,8 @@ Before beginning work:
 
 ```
 docs/
-  architecture-design.md     ← High-level system architecture and component interactions
-  implementation-plan.md     ← Active or reference engineering roadmaps
-  adr/                       ← Architecture Decision Records (MADR format: NNNN-<title>.md)
   updates/                   ← Significant feature and architectural update notes
+adr/                         ← Architecture Decision Records (MADR format: NNNN-<title>.md)
 openspec/
   domains.yaml               ← Canonical domain & capability catalog
   GOVERNANCE.md              ← Specification governance lifecycle rules
@@ -51,7 +49,7 @@ glossary/
 
 ### 1. Authoring Architecture Decision Records (ADRs)
 When an architectural choice is made (technology selection, boundary reorganization, persistence strategy):
-- Create a new ADR under `docs/adr/NNNN-<kebab-slug>.md`.
+- Create a new ADR under `adr/NNNN-<kebab-slug>.md`.
 - Structure:
   ```markdown
   # [short title of solved problem and decision]
