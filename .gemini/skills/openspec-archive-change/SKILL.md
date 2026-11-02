@@ -203,6 +203,8 @@ In both branches, never create the root as a side effect: do not run `openspec i
 **Specs:** <"✓ Synced to main specs" only if the step 4 verification passed; otherwise "No delta specs" or "Sync skipped">
 
 <"All artifacts complete. All tasks complete." — or, if archived with warnings, list them instead (e.g. "Archived with 2 incomplete tasks")>
+
+**Next Step:** Keep documentation up-to-date by running `/opsx-sync-docs` (or `/opsx:sync-docs`).
 ```
 
 **Guardrails**

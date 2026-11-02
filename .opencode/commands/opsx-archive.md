@@ -196,6 +196,8 @@ In both branches, never create the root as a side effect: do not run `openspec i
 **Specs:** ✓ Synced to main specs
 
 All artifacts complete. All tasks complete.
+
+**Next Step:** Keep documentation up-to-date by running `/opsx-sync-docs` (or `/opsx:sync-docs`).
 ```
 
 **Output On Success (No Delta Specs)**
@@ -209,6 +211,8 @@ All artifacts complete. All tasks complete.
 **Specs:** No delta specs
 
 All artifacts complete. All tasks complete.
+
+**Next Step:** Keep documentation up-to-date by running `/opsx-sync-docs` (or `/opsx:sync-docs`).
 ```
 
 **Output On Success With Warnings**

@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "files": {
+    "openspec\\GOVERNANCE.md": "7c94b66884cbefe8570c075310b791457750906d5e7d79912de823864175d409",
+    "openspec\\SCHEMAS.md": "49dfc3e4b807214dfb0dca8bc543f63f141097c70aabfcc07442901d0ff80b32"
+  },
+  "archivedChanges": {},
+  "adrs": {},
+  "domainsHash": "1bf990e4e31e3cf84b7b3dfda3b67f7d5066ef22b806ba729374590cd36d9b6e",
+  "lastSync": "2026-11-02T15:16:30.173Z"
+}

@@ -10,6 +10,7 @@ Copy it into a new repository and every AI coding harness you use — **OpenCode
 
 - [Why This Template Exists](#why-this-template-exists)
 - [The Workflow](#the-workflow)
+- [Documentation Vault](#documentation-vault)
 - [Repository Layout](#repository-layout)
 - [Supported AI Harnesses](#supported-ai-harnesses)
 - [OpenSpec System](#openspec-system)
@@ -30,7 +31,7 @@ AI coding agents are fast, but left unconstrained they drift: they invent requir
 3. **Evidence over assertion.** Anti-fabrication rules forbid invented metrics and require verification output before anything is called done.
 4. **Independent review.** The model that wrote the code is the worst judge of it. An optional cross-model audit checks the change against its specs and against security/quality standards, then prepares the Pull Request without ever pushing it.
 
-The template itself is not a project. It intentionally ships **no OpenSpec changes and no ADRs of its own** — `openspec/changes/` and `adr/` are created by the first change in the project that adopts it.
+The template itself is not a project. It intentionally ships **no product specifications, no OpenSpec changes, and no ADRs of its own** — `openspec/specs/`, `openspec/changes/`, and `adr/` are populated by the project that adopts it.
 
 ---
 
@@ -49,6 +50,7 @@ flowchart LR
     F -->|skip| H[Archive<br/>/opsx-archive]
     G --> I[Developer opens PR]
     I --> H
+    H --> J[Sync Docs<br/>/opsx-sync-docs]
 ```
 
 ### 1. Explore (optional)
@@ -92,6 +94,10 @@ To review someone else's PR with the same rubric, use `/opsx-review-pr <id|branc
 
 `/opsx-archive <change>` merges the delta specs into the living specifications under `openspec/specs/` and closes the change.
 
+### 7. Sync documentation
+
+`/opsx-sync-docs` (OpenCode, Copilot) or `/opsx:sync-docs` (Antigravity, Claude Code) incrementally synchronizes living specifications, domain definitions, ADRs, and archived changes into an interconnected Obsidian-compatible product documentation vault under `Documentation/`. It uses SHA-256 state tracking to only compile changed files.
+
 ### Command reference
 
 | Step | OpenCode / VS Code | Antigravity / Claude Code |
@@ -104,6 +110,7 @@ To review someone else's PR with the same rubric, use `/opsx-review-pr <id|branc
 | Cross-model PR audit | `/opsx-pr` | `/opsx:pr` |
 | Review remote PR | `/opsx-review-pr` | `/opsx:review-pr` |
 | Archive | `/opsx-archive` | `/opsx:archive` |
+| Sync documentation | `/opsx-sync-docs` | `/opsx:sync-docs` |
 | Sync specs only | `/opsx-sync` | `/opsx:sync` |
 
 ---
@@ -143,6 +150,14 @@ ai-scaffolding/
 ├── .vscode/
 │   ├── mcp.json                      # VS Code MCP server configuration
 │   └── settings.json                 # Recommended workspace settings
+├── Documentation/                    # Obsidian-compatible product documentation vault
+│   ├── Home.md                       # Master Map of Content (MOC) and dashboard
+│   ├── Overview/                     # Vision, concepts, and system architecture
+│   ├── Features/                     # Functional capabilities & behavioral acceptance criteria
+│   ├── Guides/                       # Walkthroughs, onboarding, governance, and schemas
+│   ├── Reference/                    # Configuration, domain catalog, and contracts
+│   ├── Decisions/                    # Architectural Decision Records (ADRs)
+│   └── Changelog/                    # Chronological release notes from archived changes
 ├── glossary/                         # Business and technical ubiquitous language
 ├── openspec/
 │   ├── config.yaml                   # OpenSpec tool configuration & skill bindings
@@ -176,6 +191,7 @@ ai-scaffolding/
   - `/opsx-pr` — Run the optional cross-model PR audit, write `pr.md`, and print PR commands without pushing.
   - `/opsx-review-pr` — Fetch and review a remote PR locally by PR ID or branch.
   - `/opsx-archive` — Sync delta specs to the living specs and archive the change.
+  - `/opsx-sync-docs` — Incrementally synchronize specifications, ADRs, and archived changes into the Obsidian documentation vault.
   - `/opsx-sync` — Synchronize delta specs to the living specs without archiving.
   - `/opsx-update` — Revise a change's planning artifacts and keep them coherent with one another.
   - `/opsx-ff` — Fast-forward: create a change and generate every artifact needed for implementation in one go.
@@ -209,6 +225,31 @@ ai-scaffolding/
 - **Context Entry Point**: `CLAUDE.md` references `AGENTS.md` to keep guidelines and command habits identical.
 - **Commands**: `.claude/commands/opsx/` mirrors the lifecycle in colon style (`/opsx:*`, `bulk-apply` is OpenCode-only); see [OpenCode](#opencode) for what each command does.
 - **Subagents**: `.claude/agents/pr-reviewer.md` provides the isolated cross-model reviewer.
+
+---
+
+## Documentation Vault
+
+The `Documentation/` directory establishes an Obsidian-compatible product documentation vault organized by product concerns (inspired by the Diátaxis framework and Obsidian Maps of Content):
+
+```
+Documentation/
+├── Home.md                       # Master Map of Content (MOC) and dashboard
+├── Overview/                     # Product vision, system actors, and architecture
+├── Features/                     # Functional capabilities & behavioral acceptance criteria
+├── Guides/                       # Walkthroughs, onboarding, governance, and schemas
+├── Reference/                    # Configuration, domain catalog, and contracts
+├── Decisions/                    # Architectural Decision Records (ADRs)
+└── Changelog/                    # Human-readable release history from archived changes
+```
+
+### Dynamic & Architecture-Agnostic Synchronization
+
+Running `/opsx-sync-docs` (or `/opsx:sync-docs`):
+1. **Dynamic Domain Discovery**: Reads `openspec/domains.yaml` dynamically at runtime. Works for any project type (CLI tools, libraries, SDKs, backend services, desktop apps, or full-stack monorepos).
+2. **Intelligent Incremental State**: Uses SHA-256 content hashing recorded in `Documentation/.sync-state.json`. Unchanged specifications, domains, and archived changes are skipped, completing in milliseconds.
+3. **Semantic Markdown & Wikilinks**: Formats Gherkin scenarios into readable acceptance criteria callouts and generates bidirectional Obsidian `[[wikilinks]]`.
+4. **Automated Governance & Schema Sync**: Synchronizes `openspec/GOVERNANCE.md` and `openspec/SCHEMAS.md` into `Documentation/Guides/`, keeping canonical files intact while ensuring first-class browsing in the vault.
 
 ---
 

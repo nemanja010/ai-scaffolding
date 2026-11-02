@@ -1,0 +1,25 @@
+---
+description: "Synchronize OpenSpec specifications, ADRs, and archived changes into Obsidian documentation"
+---
+
+Synchronize living behavior specifications, domain catalogs, architectural decisions, and archived changes into the Obsidian documentation vault under `Documentation/`.
+
+**Steps**
+
+1. **Execute documentation synchronization**
+   Run the synchronization script from the repository root:
+   ```bash
+   node .agents/skills/documentation-sync/scripts/sync-docs.cjs
+   ```
+   To force a complete vault rebuild regardless of cache:
+   ```bash
+   node .agents/skills/documentation-sync/scripts/sync-docs.cjs --force
+   ```
+
+2. **Verify output status**
+   - The script reports the number of files generated or updated.
+   - If no changes were detected, it confirms that documentation is up to date.
+
+3. **Display completion summary**
+   - Link the user to `Documentation/Home.md` (Map of Content).
+   - Summarize which feature, reference, decision, or changelog notes were created or updated.
