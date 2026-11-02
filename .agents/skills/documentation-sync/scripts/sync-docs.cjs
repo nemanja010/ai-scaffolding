@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
+const { verifyVault } = require('./verify-vault.cjs');
 
 // Resolve repository root
 function findRepoRoot(startDir = process.cwd()) {
@@ -886,9 +887,9 @@ function formatProductOverview(meta) {
   if (isTemplateScaffold(meta)) {
     return `---
 title: "Product Overview"
+description: "Executive summary, system mission, target personas, and core capabilities of ${meta.name}."
 type: overview
 project: "${meta.name}"
-last_synced: "${new Date().toISOString()}"
 tags:
   - overview
   - product
@@ -1132,9 +1133,9 @@ ai-scaffolding/
 
   return `---
 title: "Product Overview"
+description: "Executive summary, operational purpose, target personas, and core capabilities of ${meta.name} (${meta.type})."
 type: overview
 project: "${meta.name}"
-last_synced: "${new Date().toISOString()}"
 tags:
   - overview
   - product
@@ -1201,9 +1202,9 @@ function formatSystemArchitecture(meta, domains) {
   if (isTemplateScaffold(meta)) {
     return `---
 title: "System Architecture"
+description: "System architecture, multi-harness instruction projection, execution lifecycles, and component topology for ${meta.name}."
 type: architecture
 project: "${meta.name}"
-last_synced: "${new Date().toISOString()}"
 tags:
   - architecture
   - system-design
@@ -1560,9 +1561,9 @@ System architecture aligns with the architectural domains declared in \`openspec
 
   return `---
 title: "System Architecture"
+description: "Detailed system architecture, container topology, execution flow, and subsystem responsibilities for ${meta.name} (${meta.type})."
 type: architecture
 project: "${meta.name}"
-last_synced: "${new Date().toISOString()}"
 tags:
   - architecture
   - system-design
@@ -1716,11 +1717,581 @@ function parseLivingSpec(specContent) {
   return spec;
 }
 
+// Generate Overview landing page (Overview/Overview.md)
+function formatOverviewLanding(meta, domains) {
+  const isScaffold = isTemplateScaffold(meta);
+  let readingPathFlow = '';
+
+  if (isScaffold) {
+    readingPathFlow = `flowchart TD
+    Start(["👋 Joining the Project"])
+
+    subgraph Roles ["Select Your Focus"]
+        DevRole["Software Engineers & Contributors"]
+        AiRole["AI Coding Assistants & Harness Authors"]
+        ArchRole["System Architects & Tech Leads"]
+        ProductRole["Product Managers & Domain Leads"]
+    end
+
+    subgraph Docs ["Recommended Reading Trajectory"]
+        DocProduct["1. [[Overview/Product-Overview|Product-Overview]]<br/><i>Mission, problem/solution, personas, workflows</i>"]
+        DocSystem["2. [[Overview/System-Architecture|System-Architecture]]<br/><i>Multi-harness projection, execution flow, subsystems</i>"]
+        DocOnboarding["3. [[Guides/Developer-Onboarding|Developer-Onboarding]]<br/><i>Harness setup, workflow cycle, discipline</i>"]
+        DocGovernance["4. [[Guides/OpenSpec-Governance|OpenSpec-Governance]]<br/><i>Domains, capabilities, living spec contracts</i>"]
+        DocFeatures["5. [[Features/Overview|Features-Overview]]<br/><i>Product capability catalog & workflow notes</i>"]
+        DocDecisions["6. [[Decisions/Overview|Decisions-Overview]]<br/><i>Architectural Decision Records (ADRs)</i>"]
+    end
+
+    Start --> DevRole
+    Start --> AiRole
+    Start --> ArchRole
+    Start --> ProductRole
+
+    DevRole --> DocProduct --> DocSystem --> DocOnboarding --> DocFeatures
+    AiRole --> DocSystem --> DocGovernance --> DocFeatures
+    ArchRole --> DocProduct --> DocSystem --> DocDecisions
+    ProductRole --> DocProduct --> DocFeatures`;
+  } else if (meta.archetype === 'cli-tool') {
+    readingPathFlow = `flowchart TD
+    Start(["👋 Getting Started"])
+
+    subgraph Roles ["Select Your Focus"]
+        UserRole["CLI Users & Operators"]
+        DevRole["Tool Developers & Contributors"]
+        ArchRole["Integrators & Platform Engineers"]
+    end
+
+    subgraph Docs ["Recommended Reading Trajectory"]
+        DocProduct["1. [[Overview/Product-Overview|Product-Overview]]<br/><i>Command mission, CLI flags, user journeys</i>"]
+        DocSystem["2. [[Overview/System-Architecture|System-Architecture]]<br/><i>Execution pipeline, AST symbols, dependencies</i>"]
+        DocFeatures["3. [[Features/Overview|Features-Overview]]<br/><i>Command capabilities & behavioral contracts</i>"]
+        DocRef["4. [[Reference/Overview|Reference-Overview]]<br/><i>Environment configuration & domain contracts</i>"]
+    end
+
+    Start --> UserRole
+    Start --> DevRole
+    Start --> ArchRole
+
+    UserRole --> DocProduct --> DocFeatures
+    DevRole --> DocProduct --> DocSystem --> DocFeatures
+    ArchRole --> DocSystem --> DocRef`;
+  } else if (meta.archetype === 'shared-library') {
+    readingPathFlow = `flowchart TD
+    Start(["👋 Getting Started"])
+
+    subgraph Roles ["Select Your Focus"]
+        ConsumerRole["Consuming Application Developers"]
+        MaintainerRole["Library Maintainers & Contributors"]
+        ArchRole["API Architects & Reviewers"]
+    end
+
+    subgraph Docs ["Recommended Reading Trajectory"]
+        DocProduct["1. [[Overview/Product-Overview|Product-Overview]]<br/><i>Library purpose, public API, usage journeys</i>"]
+        DocSystem["2. [[Overview/System-Architecture|System-Architecture]]<br/><i>Module decomposition, typing contracts, dependencies</i>"]
+        DocFeatures["3. [[Features/Overview|Features-Overview]]<br/><i>Capability specifications & invariants</i>"]
+        DocRef["4. [[Reference/Overview|Reference-Overview]]<br/><i>API catalog & domain specifications</i>"]
+    end
+
+    Start --> ConsumerRole
+    Start --> MaintainerRole
+    Start --> ArchRole
+
+    ConsumerRole --> DocProduct --> DocFeatures
+    MaintainerRole --> DocProduct --> DocSystem --> DocFeatures
+    ArchRole --> DocSystem --> DocRef`;
+  } else {
+    readingPathFlow = `flowchart TD
+    Start(["👋 Joining the Project"])
+
+    subgraph Roles ["Select Your Focus"]
+        BackendRole["Backend & Platform Engineers"]
+        FrontendRole["Frontend & Client Engineers"]
+        ArchitectRole["Architects & DevOps / SRE"]
+        ProductRole["Product Managers & Domain Leads"]
+    end
+
+    subgraph Docs ["Recommended Reading Trajectory"]
+        DocProduct["1. [[Overview/Product-Overview|Product-Overview]]<br/><i>Mission, actors, workspaces, operational lifecycle</i>"]
+        DocSystem["2. [[Overview/System-Architecture|System-Architecture]]<br/><i>Container topology, services, communication matrix</i>"]
+        DocFeatures["3. [[Features/Overview|Features-Overview]]<br/><i>Product workflow domains & capabilities</i>"]
+        DocDecisions["4. [[Decisions/Overview|Decisions-Overview]]<br/><i>Architectural commitments & ADR history</i>"]
+    end
+
+    Start --> BackendRole
+    Start --> FrontendRole
+    Start --> ArchitectRole
+    Start --> ProductRole
+
+    BackendRole --> DocProduct --> DocSystem --> DocFeatures
+    FrontendRole --> DocProduct --> DocSystem --> DocFeatures
+    ArchitectRole --> DocProduct --> DocSystem --> DocDecisions
+    ProductRole --> DocProduct --> DocFeatures`;
+  }
+
+  return `---
+title: "System Overview & Architecture Guide"
+description: "Architectural landing page and orientation guide — core mental model, reading paths for engineers and product managers, subsystem decomposition, and foundational invariants."
+type: overview
+project: "${meta.name}"
+tags:
+  - overview
+  - architecture
+  - index
+  - reading-guide
+---
+
+# System Overview & Architecture Guide: ${meta.name}
+
+> **Target Audience**: Software Engineers, System Architects, DevOps Leads, and Product Managers seeking an authoritative, unified mental model of **${meta.name}** (${meta.type}).
+
+Welcome to the architectural nerve center of the knowledge vault. This section breaks down the system from high-level operational context (C1) down to container topologies (C2) and internal execution models (C3).
+
+---
+
+## 🗺️ Architectural Reading Paths
+
+Choose the reading order tailored to your role:
+
+\`\`\`mermaid
+${readingPathFlow}
+\`\`\`
+
+---
+
+## 📚 Overview Document Catalog
+
+| Document | Architectural Level | Core Questions Answered | Primary Models & Diagrams |
+| :--- | :--- | :--- | :--- |
+| **[[Overview/Product-Overview|Product-Overview]]** | **C1 — System Context** | Why does the system exist? What operational problem does it solve? Who are the actors and what is the end-to-end lifecycle? | C1 System Context diagram, Operational Persona Workspaces, Lifecycle Timeline. |
+| **[[Overview/System-Architecture|System-Architecture]]** | **C2 — Container Topology** | What physical containers run in production? How do hosts, services, and storage interact? What are the network ports and protocols? | Full C2 Container Topology diagram, Subsystem Component Index, System Communication Matrix. |
+
+---
+
+## 🏛️ Foundational Architectural Invariants
+
+1. **Living Spec-Driven Development**: All non-trivial modifications, bug fixes, and feature additions originate as OpenSpec change proposals with verifiable behavior contracts before code is written.
+2. **Deterministic Time Management**: Never invoke system clock methods directly in domain logic. Always inject a clock or time provider abstraction to guarantee determinism in automated test suites.
+3. **Anti-Fabrication Mandate**: Never fabricate metrics, benchmark percentages, performance claims, or test counts without empirical measurement in source code or execution logs.
+4. **Git Commit Approval Gate**: Code modifications and commits require explicit developer confirmation. Agents never commit without developer consent.
+5. **Clean Architectural Boundaries**: Dependencies flow strictly inward from presentation and entry points to core domain logic and contracts.
+
+---
+[[Home|← Back to Home]] | [[Overview/Product-Overview|Product Overview →]]
+`;
+}
+
+// Build Features Overview (Features/Overview.md)
+function buildFeaturesOverview(domains, specsCatalog) {
+  let content = `---
+title: "Product Capabilities & Workflow Index"
+description: "Comprehensive index of end-to-end product capabilities and user workflows organized by workflow domains."
+type: overview
+tags:
+  - features
+  - capabilities
+  - domains
+  - index
+---
+
+# Product Capabilities & Workflow Index
+
+Welcome to the living product capability index. Capabilities in this section are synchronized directly from living specifications (\`openspec/specs/\`) and archived changes.
+
+## Living Capability Layout Standard
+All capability specifications in this vault follow the human-first layout illustrated in the **[[Features/Feature-Template|Feature Specification Template]]**.
+
+## Domain Capability Catalog
+
+| Feature / Capability Document | Domain | Key Workflows & Operational Invariants |
+| :--- | :--- | :--- |
+| **[[Features/Feature-Template|Feature Specification Template]]** | \`template\` | Standard layout illustrating human-readable workflow documentation without raw Gherkin. |
+`;
+
+  if (domains.length === 0) {
+    content += '| *(No domains declared yet)* | - | Living specifications pending creation via `/opsx-propose`. |\n';
+  } else {
+    for (const domain of domains) {
+      if (!domain.capabilities || domain.capabilities.length === 0) {
+        content += `| \`${domain.id}\` | \`${domain.id}\` | *No capabilities declared yet in domains.yaml.* |\n`;
+      } else {
+        for (const cap of domain.capabilities) {
+          const specMatch = specsCatalog.find(s => s.domain === domain.id && s.capability === cap.id);
+          const link = specMatch ? `**[[Features/${specMatch.fileName}|${toTitleCase(cap.id)}]]**` : `\`${domain.id}/${cap.id}\``;
+          const desc = specMatch && specMatch.purpose ? specMatch.purpose : (cap.description || 'System capability');
+          content += `| ${link} | \`${domain.id}\` | ${desc} |\n`;
+        }
+      }
+    }
+  }
+
+  content += `
+---
+[[Home|← Back to Home]] | [[Overview/Overview|Architecture Overview →]]
+`;
+
+  return content;
+}
+
+// Write Feature Specification Template
+function writeFeatureTemplate() {
+  const targetFile = path.join(DOCS_DIR, 'Features', 'Feature-Template.md');
+  const templateContent = `---
+title: "Feature Specification Template"
+description: "Human-readable template illustrating living capability documentation, operational narratives, and domain flowcharts."
+type: template
+tags:
+  - feature
+  - capability
+  - template
+---
+
+# [Capability Name]
+
+> **Operational Purpose**: [Plain-language summary of what this capability provides to end-users and how it fits into the broader platform].
+
+---
+
+## 1. Domain Model & Architecture
+
+[Explain the key aggregates, entities, services, and UI components executing this capability].
+
+\`\`\`mermaid
+flowchart LR
+    User["End User / Client"] --> Component["UI / Entry Point"]
+    Component --> Controller["API / Command Endpoint"]
+    Controller --> Handler["Domain Handler / Service"]
+    Handler --> Aggregate["Domain Entity / State"]
+    Aggregate --> Database[("Persistence / Storage")]
+\`\`\`
+
+---
+
+## 2. Core Workflows & Business Invariants
+
+> **Readability Principle**: Explain workflows in natural, present-tense business prose. Do NOT paste raw Gherkin \`GIVEN/WHEN/THEN\` syntax here.
+
+### [Workflow 1 Title]
+- When the user triggers this action, the system validates that...
+- If validation succeeds, the state transitions to...
+- Side-effects (notifications, integration messages) are emitted via...
+
+### [Workflow 2 Title]
+- Under condition X, the system ensures that invariant Y is never violated...
+
+---
+
+## 3. Key Decisions & Gotchas
+
+- **[Decision 1]**: [Why the team chose this architectural approach over alternatives].
+- **[Gotcha / Constraint]**: [Critical technical or business rule developers must keep in mind when modifying this code].
+
+---
+[[Home|← Back to Home]] | [[Features/Overview|← Features Index]]
+`;
+
+  if (!DRY_RUN) {
+    fs.writeFileSync(targetFile, templateContent, 'utf8');
+  }
+}
+
+// Build Decisions Overview (Decisions/Overview.md)
+function buildDecisionsOverview() {
+  let adrRows = '';
+  let adrGraphNodes = [];
+  let adrGraphEdges = [];
+
+  if (fs.existsSync(ADR_DIR)) {
+    const entries = fs.readdirSync(ADR_DIR, { withFileTypes: true });
+    const adrFiles = entries.filter(e => e.isFile() && e.name.endsWith('.md') && e.name !== 'README.md' && e.name !== 'preferences.md').map(e => e.name);
+
+    for (const file of adrFiles) {
+      const fullPath = path.join(ADR_DIR, file);
+      const content = fs.readFileSync(fullPath, 'utf8');
+      const baseName = file.replace(/\.md$/, '');
+      const titleMatch = content.match(/^#\s+(.+)$/m);
+      const title = titleMatch ? titleMatch[1].trim() : baseName;
+      const statusMatch = content.match(/Status:\s*([^\r\n]+)/i) || content.match(/status:\s*([^\r\n]+)/i);
+      const status = statusMatch ? statusMatch[1].trim() : 'Accepted';
+      const dateMatch = content.match(/Date:\s*([^\r\n]+)/i) || content.match(/date:\s*([^\r\n]+)/i);
+      const date = dateMatch ? dateMatch[1].trim() : 'Active';
+      const supersedesMatch = content.match(/Supersedes:\s*([^\r\n]+)/i) || content.match(/supersedes:\s*([^\r\n]+)/i);
+
+      const nodeId = baseName.replace(/[^a-zA-Z0-9]/g, '');
+      adrGraphNodes.push(`    ${nodeId}["${baseName}<br/>${title.slice(0, 30)}..."]`);
+
+      if (supersedesMatch) {
+        const supersededTarget = supersedesMatch[1].trim().replace(/\.md$/, '').replace(/[^a-zA-Z0-9]/g, '');
+        adrGraphEdges.push(`    ${supersededTarget} -->|superseded by| ${nodeId}`);
+      }
+
+      adrRows += `| **[[Decisions/${baseName}|${baseName}]]** | ${title} | ${status} | ${date} | Authoritative architectural decision |\n`;
+    }
+  }
+
+  let graphMermaid = '';
+  if (adrGraphNodes.length > 0) {
+    graphMermaid = `flowchart TD\n${adrGraphNodes.join('\n')}\n${adrGraphEdges.join('\n')}`;
+  } else {
+    graphMermaid = `flowchart TD
+    ADR0001["ADR-0001<br/>Baseline Architecture Decision"] -.->|superseded by| ADR0002["ADR-0002<br/>Evolutionary Decision"]
+    style ADR0001 stroke-dasharray: 5 5
+    style ADR0002 stroke-dasharray: 5 5`;
+  }
+
+  if (!adrRows) {
+    adrRows = '| *(No ADRs recorded yet)* | Initial architectural decisions will be cataloged here | Pending | - | Author with `architectural-decision-records` skill |\n';
+  }
+
+  return `---
+title: "Architectural Decision Records (ADRs)"
+description: "Master index and Mermaid supersession graph of all repository architectural decision records."
+type: overview
+tags:
+  - decisions
+  - adr
+  - architecture
+  - supersession-graph
+---
+
+# Architectural Decision Records (ADRs)
+
+Architectural decisions govern non-trivial engineering commitments, trade-offs, and invariants. They are authored under \`adr/\` and synchronized into this vault.
+
+## 🕸️ ADR Supersession Graph
+
+\`\`\`mermaid
+${graphMermaid}
+\`\`\`
+
+## 📋 ADR Catalog
+
+| ADR | Title | Status | Date | Core Commitment |
+| :--- | :--- | :--- | :--- | :--- |
+${adrRows}
+---
+[[Home|← Back to Home]] | [[Overview/Overview|Architecture Overview →]]
+`;
+}
+
+// Build Changelog Overview (Changelog/Overview.md)
+function buildChangelogOverview() {
+  let changeRows = '';
+
+  if (fs.existsSync(ARCHIVE_DIR)) {
+    const entries = fs.readdirSync(ARCHIVE_DIR, { withFileTypes: true });
+    const archiveDirs = entries.filter(e => e.isDirectory() && e.name !== '.gitkeep').map(e => e.name).sort().reverse();
+
+    for (const archiveName of archiveDirs) {
+      const archivePath = path.join(ARCHIVE_DIR, archiveName);
+      const proposalPath = path.join(archivePath, 'proposal.md');
+      let summary = 'OpenSpec change implementation';
+      let date = 'Recent';
+      const dateMatch = archiveName.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        date = dateMatch[1];
+      }
+
+      if (fs.existsSync(proposalPath)) {
+        const propContent = fs.readFileSync(proposalPath, 'utf8');
+        const whyMatch = propContent.match(/## Why\s+([\s\S]*?)(?=\n## |$)/);
+        if (whyMatch) {
+          summary = whyMatch[1].trim().replace(/\r?\n/g, ' ').slice(0, 120) + '...';
+        }
+      }
+
+      changeRows += `| ${date} | **[[Changelog/${archiveName}|${archiveName}]]** | System Capabilities | ${summary} |\n`;
+    }
+  }
+
+  if (!changeRows) {
+    changeRows = `| 2026-11-01 | **Baseline Architecture Setup** | \`core-platform/architecture\` | Initial platform architecture and specification baseline. |\n`;
+  }
+
+  return `---
+title: "Release Notes & Change History"
+description: "Chronological release notes and human-readable summaries of completed OpenSpec changes."
+type: overview
+tags:
+  - changelog
+  - releases
+  - history
+  - index
+---
+
+# Release Notes & Change History
+
+This changelog records the evolution of the platform. Entries are synthesized from completed OpenSpec changes, translating formal proposals and diffs into human-readable summaries of **Why**, **What Changed**, and **Operational Impact**.
+
+## Recent Changes
+
+| Change Date | Change Name | Affected Capabilities | Summary |
+| :--- | :--- | :--- | :--- |
+${changeRows}
+---
+[[Home|← Back to Home]] | [[Overview/Overview|Architecture Overview →]]
+`;
+}
+
+// Build Technical Reference Overview (Reference/Overview.md)
+function buildReferenceOverview() {
+  return `---
+title: "Technical Reference & Contracts"
+description: "Authoritative technical contracts, platform services, and architectural domain definitions."
+type: overview
+tags:
+  - reference
+  - contracts
+  - architecture
+  - index
+---
+
+# Technical Reference & Contracts
+
+This section houses authoritative technical contracts, platform configurations, and architectural domain definitions.
+
+## Authoritative Reference Documents
+- **[[Reference/Domain-Catalog|Architectural Domain Catalog]]**: Canonical bounded contexts and capabilities registered in \`openspec/domains.yaml\`.
+- **[[Reference/Configuration-Guide|Configuration Guide]]**: Centralized runtime settings, environment profiles, and secrets governance.
+
+---
+[[Home|← Back to Home]] | [[Reference/Domain-Catalog|Domain Catalog →]]
+`;
+}
+
+// Write Reference Configuration Guide
+function writeConfigurationGuide() {
+  const targetFile = path.join(DOCS_DIR, 'Reference', 'Configuration-Guide.md');
+  const content = `---
+title: "Configuration & Environment Guide"
+description: "Centralized runtime settings, environment profiles, configuration precedence, and secrets governance."
+type: reference
+tags:
+  - reference
+  - configuration
+  - environment
+  - settings
+---
+
+# Configuration & Environment Guide
+
+This document defines the configuration architecture, environment precedence, and secret management standards for the repository.
+
+## Configuration Precedence Hierarchy
+Settings are resolved according to strict hierarchical precedence:
+1. **Command-Line Flags**: Explicit CLI arguments override all other sources.
+2. **Environment Variables**: OS-level environment variables (prefixed by convention).
+3. **Local Overrides**: Git-ignored local configuration files (e.g. \`.env.local\`, \`appsettings.Local.json\`).
+4. **Environment Profiles**: Profile-specific manifests (\`development\`, \`staging\`, \`production\`).
+5. **Default Baseline**: Embedded fallback configuration defaults.
+
+## Secret Management Rules
+- **Never commit secrets**: API keys, database credentials, private certificates, and tokens must never enter git history.
+- **Use Mock/Local Providers in Development**: Local development defaults to stubbed services or ephemeral containers.
+- **Vault & Environment Injection in Production**: Secrets are injected securely via container environments or secret management systems.
+
+---
+[[Home|← Back to Home]] | [[Reference/Overview|← Reference Index]]
+`;
+
+  if (!DRY_RUN) {
+    fs.writeFileSync(targetFile, content, 'utf8');
+  }
+}
+
+// Write Developer Onboarding Guide
+function writeDeveloperOnboarding() {
+  const targetFile = path.join(DOCS_DIR, 'Guides', 'Developer-Onboarding.md');
+  const content = `---
+title: "Developer Onboarding & Workflow Guide"
+description: "Essential onboarding guide for software engineers and AI coding assistants navigating the multi-harness development workflow."
+type: guide
+tags:
+  - guide
+  - onboarding
+  - developer
+  - workflow
+---
+
+# Developer Onboarding & Workflow Guide
+
+## Welcome to the Project
+This repository is engineered for seamless, specification-driven collaboration between human software engineers and AI coding assistants across terminals, editors, and IDEs.
+
+## Multi-Harness Toolchain
+The repository provides unified instruction governance and skills across all 4 major AI harnesses:
+- **GitHub Copilot**: Configured via \`.github/\` instructions and prompt files.
+- **OpenCode**: Configured via \`.opencode/\` subagents, commands, and skills.
+- **Claude Code**: Configured via \`.claude/\` commands and \`CLAUDE.md\`.
+- **Google Antigravity CLI & IDE**: Configured via \`.gemini/\` and \`GEMINI.md\`.
+
+All harnesses align to the canonical rules in \`AGENTS.md\`.
+
+## The OpenSpec Development Lifecycle
+All non-trivial feature additions, architectural updates, and bug fixes follow the spec-driven lifecycle:
+1. **Propose (\`/opsx-propose\` or \`openspec new change <name>\`)**: Draft user story, architecture design, living spec deltas, and task checklist.
+2. **Apply (\`/opsx-apply\`)**: Execute tasks step-by-step using test-driven development.
+3. **Verify (\`/opsx-verify\`)**: Validate that all scenarios and contract invariants pass.
+4. **Archive & Synchronize (\`/opsx-archive\` & \`/opsx-sync-docs\`)**: Promote delta specs into living specifications and synchronize this documentation vault.
+
+## Key Engineering Discipline & Rules
+- **Anti-Fabrication**: Never invent metrics, benchmark percentages, or test counts. Empirical evidence is mandatory.
+- **Git Commit Approval Gate**: AI agents never run \`git commit\`, amend, or push without explicit confirmation from the developer.
+- **Deterministic Time**: Always inject clock/time abstractions; never reference system time directly in domain logic.
+
+---
+[[Home|← Back to Home]] | [[Guides/OpenSpec-Governance|OpenSpec Governance →]]
+`;
+
+  if (!DRY_RUN) {
+    fs.writeFileSync(targetFile, content, 'utf8');
+  }
+}
+
+// Write Vault README for Obsidian and VS Code Foam
+function writeVaultReadme() {
+  const targetFile = path.join(DOCS_DIR, 'README.md');
+  const content = `---
+title: "Developer Documentation Vault Guide"
+description: "Reading guide and orientation for exploring this documentation vault in Obsidian or VS Code Foam."
+type: guide
+tags:
+  - documentation
+  - vault
+  - obsidian
+  - guide
+---
+
+# Developer Documentation Vault
+
+Welcome to the **Obsidian-compatible developer knowledge vault** for this repository.
+
+## Opening in Obsidian
+1. Open [Obsidian](https://obsidian.md).
+2. Select **Open folder as vault**.
+3. Choose the \`Documentation/\` folder of this repository.
+
+## Navigating the Vault
+- **Start at [[Home]]**: The central Map of Content (MOC), Executive Architecture Scorecard, and system overview.
+- **Explore Architecture in [[Overview/Overview]]**: Master architectural mental model, role-tailored reading paths, and container topologies.
+- **Explore Capabilities in [[Features/Overview]]**: Living product capabilities, core workflows, and business invariants.
+- **Inspect Decisions in [[Decisions/Overview]]**: Architectural Decision Records (ADRs) with an interactive Mermaid supersession graph.
+- **Track Changes in [[Changelog/Overview]]**: Chronological release history synthesized from OpenSpec change proposals.
+
+## Automatic Synchronization
+This vault is dynamically maintained by the OpenSpec documentation sync engine. Whenever you complete a feature or change, run:
+\`\`\`bash
+/opsx-sync-docs
+\`\`\`
+*(or run \`node .agents/skills/documentation-sync/scripts/sync-docs.cjs\`)*.
+`;
+
+  if (!DRY_RUN) {
+    fs.writeFileSync(targetFile, content, 'utf8');
+  }
+}
+
 // Map capability to documentation category
 function categorizeCapability(domainId, capabilityId) {
-  if (domainId.includes('core') || domainId.includes('platform') || capabilityId.includes('config') || capabilityId.includes('data')) {
-    return 'Reference';
-  }
   return 'Features';
 }
 
@@ -1731,6 +2302,7 @@ function formatObsidianSpecNote(domain, capability, spec, lastSynced) {
 
   let md = `---
 title: "${capTitle}"
+description: "${(spec.purpose || 'Living behavioral specification for ' + capability).replace(/"/g, '\\"')}"
 type: specification
 domain: "${domain}"
 capability: "${capability}"
@@ -1745,12 +2317,12 @@ tags:
 
 > [!NOTE] Living System Specification
 > Canonical Source: \`openspec/specs/${domain}/${capability}/spec.md\`
-> Domain Bounded Context: [[${domainTitle}]]
+> Domain Bounded Context: [[Reference/Domain-Catalog|${domainTitle}]]
 
-## Executive Summary
+## Operational Purpose
 ${spec.purpose || '*No purpose description provided in living specification.*'}
 
-## Behavioral Contracts & Requirements
+## Core Workflows & Business Invariants
 
 `;
 
@@ -1779,7 +2351,7 @@ ${spec.purpose || '*No purpose description provided in living specification.*'}
   }
 
   md += `---
-[[Home|← Back to Home]] | [[Reference/Domain-Catalog|Domain Catalog]]
+[[Home|← Back to Home]] | [[Features/Overview|← Features Index]] | [[Reference/Domain-Catalog|Domain Catalog]]
 `;
 
   return md;
@@ -1824,8 +2396,8 @@ function syncFrameworkGuides(state, updatedCount) {
       if (VERBOSE) console.log('[Sync] Updating OpenSpec Governance guide');
       const note = `---
 title: "OpenSpec Governance"
+description: "Governance model for architectural domains, capabilities, and living specifications."
 type: guide
-last_synced: "${new Date().toISOString()}"
 tags:
   - guide
   - governance
@@ -1856,8 +2428,8 @@ ${content}
       if (VERBOSE) console.log('[Sync] Updating OpenSpec Schemas guide');
       const note = `---
 title: "OpenSpec Schemas"
+description: "Syntax and schema specification for OpenSpec changes, delta specs, and task tracking."
 type: guide
-last_synced: "${new Date().toISOString()}"
 tags:
   - guide
   - schemas
@@ -1879,6 +2451,8 @@ ${content}
       updatedCount++;
     }
   }
+
+  writeDeveloperOnboarding();
 
   return updatedCount;
 }
@@ -1907,6 +2481,7 @@ function processAdrs(state, updatedCount) {
 
     const adrNote = `---
 title: "${title}"
+description: "Architectural Decision Record: ${title}"
 type: decision
 adr: "${file}"
 last_synced: "${new Date().toISOString()}"
@@ -1961,6 +2536,7 @@ function processArchivedChanges(state, updatedCount) {
 
     const changelogNote = `---
 title: "Change: ${archiveName}"
+description: "Archived OpenSpec change: ${archiveName}"
 type: changelog
 change: "${archiveName}"
 last_synced: "${new Date().toISOString()}"
@@ -1997,61 +2573,249 @@ ${whatText || '*Details preserved in archived delta specs.*'}
 
 // Build Dynamic Map of Content (Home.md)
 function buildHomeMoc(meta, domains, specsCatalog) {
-  let content = `# Documentation Vault: ${meta.name}
+  const isScaffold = isTemplateScaffold(meta);
+  const langArray = Object.keys(meta.languages || {});
+  const langText = langArray.length > 0 ? langArray.join(', ') : 'Polyglot';
+  const fwArray = meta.frameworks instanceof Set ? Array.from(meta.frameworks) : (Array.isArray(meta.frameworks) ? meta.frameworks : []);
+  const fwText = fwArray.length > 0 ? fwArray.join(', ') : langText;
+  let c1Mermaid = '';
 
-Welcome to the comprehensive product and architecture documentation for **${meta.name}** (${meta.type}). This knowledge base is dynamically synchronized from AST symbol registries, codebase snapshots, living behavior specifications, and OpenSpec change records.
+  if (isScaffold) {
+    c1Mermaid = `flowchart LR
+    subgraph Users ["Developers & AI Coding Assistants"]
+        Dev["Software Engineers"]
+        Copilot["GitHub Copilot (.github/)"]
+        OpenCode["OpenCode (.opencode/)"]
+        Claude["Claude Code (.claude/)"]
+        Antigravity["Antigravity CLI/IDE (.gemini/)"]
+    end
 
-## 🧭 Map of Content (MOC)
+    subgraph CoreEngine ["Canonical Architecture Core"]
+        Agents["AGENTS.md (Universal Discipline)"]
+        OpenSpec["OpenSpec Engine (specs/, changes/)"]
+        MCPHub["MCP Hub (Dockerized LSP & Graphs)"]
+    end
 
-| Section | Focus | Quick Link |
+    subgraph KnowledgeVault ["Obsidian Documentation Vault"]
+        HomeMOC["Documentation/Home.md"]
+        OverviewMOC["Overview/ (Product & System Architecture)"]
+        FeaturesMOC["Features/ (Living Spec Contracts)"]
+        DecisionsMOC["Decisions/ (ADR Supersession Graph)"]
+        ChangelogMOC["Changelog/ (Synthesized Release Notes)"]
+    end
+
+    Dev --> Copilot & OpenCode & Claude & Antigravity
+    Copilot & OpenCode & Claude & Antigravity --> Agents
+    Agents --> OpenSpec
+    OpenSpec --> MCPHub
+    OpenSpec --> KnowledgeVault`;
+  } else if (meta.archetype === 'cli-tool') {
+    c1Mermaid = `flowchart LR
+    subgraph Users ["CLI Consumers & Automation"]
+        Dev["Terminal Operators"]
+        CI["CI/CD Automation Pipelines"]
+    end
+
+    subgraph App ["CLI Binary & Execution Engine"]
+        CLI["${meta.name} CLI"]
+        Commands["Subcommands & Options Parser"]
+        Core["Core Execution Logic"]
+        CLI --> Commands --> Core
+    end
+
+    subgraph System ["Environment & Target Resources"]
+        FS[("Local Filesystem & Workspaces")]
+        Env["Environment State"]
+        Core --> FS & Env
+    end
+
+    Dev & CI -->|Commands & Flags| CLI`;
+  } else if (meta.archetype === 'shared-library') {
+    c1Mermaid = `flowchart LR
+    subgraph Consumers ["Consumers & Downstream Systems"]
+        Apps["Client Applications"]
+        Services["Microservices & Daemons"]
+    end
+
+    subgraph Lib ["Shared Library Core (${meta.name})"]
+        PublicAPI["Public API Contract & Types"]
+        DomainCore["Domain Logic & Invariants"]
+        Utils["Internal Algorithms & Drivers"]
+        PublicAPI --> DomainCore --> Utils
+    end
+
+    subgraph Target ["Runtime Environment"]
+        Runtime["Runtime Platform (${langText})"]
+        Lib --> Runtime
+    end
+
+    Apps & Services -->|Imports & Calls| PublicAPI`;
+  } else if (meta.archetype === 'frontend-spa') {
+    c1Mermaid = `flowchart LR
+    subgraph Users ["End Users"]
+        Browser["Desktop & Mobile Browsers"]
+    end
+
+    subgraph SPA ["Frontend Application (${meta.name})"]
+        Shell["Application Shell & Routing"]
+        Components["UI Views & Components"]
+        StateStore["Reactive State & Signals"]
+        Services["API Interceptors & Push Listeners"]
+        Shell --> Components --> StateStore --> Services
+    end
+
+    subgraph Backend ["Remote APIs & Services"]
+        APIs["Backend REST / GraphQL Endpoints"]
+        Push["WebSocket / Real-Time Gateway"]
+    end
+
+    Browser <-->|User Interaction| Shell
+    Services <-->|HTTP / WebSocket| APIs & Push`;
+  } else {
+    c1Mermaid = `flowchart LR
+    subgraph Clients ["Clients & External Consumers"]
+        Users["End Users & Operators"]
+        ThirdParty["External Systems / Webhooks"]
+    end
+
+    subgraph Platform ["${meta.name} Execution Tier"]
+        ApiHosts["API Endpoints & Gateways"]
+        Services["Domain Services & Workers"]
+        DB[("Persistence & Event Storage")]
+        ApiHosts <--> DB
+        Services <--> DB
+    end
+
+    Users <-->|HTTP / RPC| ApiHosts
+    ThirdParty <-->|Events / Integration| Services`;
+  }
+
+  const entitiesCount = meta.astCatalog && meta.astCatalog.entities ? meta.astCatalog.entities.length : 0;
+  const endpointsCount = meta.astCatalog && meta.astCatalog.endpoints ? meta.astCatalog.endpoints.length : 0;
+
+  return `---
+title: "System Knowledge Base"
+description: "Central knowledge hub and master Map of Content (MOC) — product mission, core capabilities, architecture, engineering guidelines, and architectural decisions."
+type: home
+project: "${meta.name}"
+tags:
+  - home
+  - index
+  - navigation
+  - moc
+  - dashboard
+related: "[[Overview/Overview]], [[Features/Overview]], [[Decisions/Overview]], [[Changelog/Overview]]"
+---
+
+# System Knowledge Base: ${meta.name}
+
+> **${meta.name}** — ${meta.description || (isScaffold ? 'Enterprise-grade multi-harness AI engineering scaffold and starter monorepo.' : 'Living software application architecture.')}
+
+Welcome to the developer knowledge vault for **${meta.name}** (${meta.type}). This vault is organized into structured sections for onboarding, rapid architectural refresh, technical contracts, and AI-assisted engineering.
+
+---
+
+## 🗺️ Master Navigation (Map of Content)
+
+### 1. 🏗️ Overview — System Context & Architecture
+
+High-level product mission, C1/C2 system context, container topology, and technology stack.
+
+- **[[Overview/Overview|Architecture Overview & Reading Guide]]**: Master architectural landing page and tailored reading trajectories.
+
+\`\`\`mermaid
+${c1Mermaid}
+\`\`\`
+
+#### Executive Architecture Scorecard
+- **Hosting & Environment**: ${isScaffold ? 'Multi-Harness Monorepo (Windows, Linux, macOS, Container MCP Hub)' : (meta.archetype === 'cli-tool' ? 'Cross-platform CLI tool' : 'Host platform / container environment')}
+- **Core Execution Tier**: **${meta.type}** built with **${langText}**
+- **Persistence Tier**: ${entitiesCount > 0 ? `${entitiesCount} Domain Entities / Data Models discovered` : 'File-based, In-Memory, or Configuration-Driven'}
+- **Interfaces & Routing**: ${endpointsCount > 0 ? `${endpointsCount} API / RPC Endpoints discovered` : 'CLI subcommands, library APIs, and modular routines'}
+- **Primary Frameworks**: ${fwText}
+
+| Document | Architectural Level | Description |
 | :--- | :--- | :--- |
-| **Product Overview** | The "WHAT": Vision, purpose, user journeys, and capabilities | [[Overview/Product-Overview\\|Read Product Overview]] |
-| **System Architecture** | The "HOW" & "WHY": Architecture model, lifecycle diagrams, and design trade-offs | [[Overview/System-Architecture\\|View System Architecture]] |
-| **Features & Capabilities** | Living behavioral specifications and Gherkin scenarios | [[Features/Overview\\|Explore Features]] |
-| **Developer Guides** | Practical onboarding, lifecycle governance, and schemas | [[Guides/Developer-Onboarding\\|Onboarding]] · [[Guides/OpenSpec-Governance\\|Governance]] · [[Guides/OpenSpec-Schemas\\|Schemas]] |
-| **Technical Reference** | Configuration, domain catalog, and contracts | [[Reference/Overview\\|View Reference]] |
-| **Architectural Decisions** | Durable decision records (ADRs) | [[Decisions/Overview\\|Browse ADRs]] |
-| **Product Changelog** | Release history and archived changes | [[Changelog/Overview\\|View Changelog]] |
+| **[[Overview/Overview]]** | **Landing Page** | Master architectural mental model, reading paths for engineers, and subsystem index. |
+| **[[Overview/Product-Overview]]** | **C1 Context** | Operational mission, actors, workspaces, and end-to-end lifecycle. |
+| **[[Overview/System-Architecture]]** | **C2 Containers** | Container topology, multi-host deployment layout, and communication matrix. |
+
+---
+
+### 2. ⚡ Features — Product Capabilities & Workflows
+
+End-to-end product capabilities and user workflows mapped directly to \`openspec/domains.yaml\`.
+
+- See **[[Features/Overview]]** for the complete domain capability catalog.
+- Living capability format reference: **[[Features/Feature-Template|Feature Specification Template]]**.
+
+---
+
+### 3. 🏛️ Decisions — Architectural Decision Records (ADRs)
+
+Architectural commitments, trade-offs, and supersession history.
+
+- See **[[Decisions/Overview]]** for the master index and interactive Mermaid supersession graph.
+
+---
+
+### 4. 📜 Changelog — Release & Change History
+
+Human-readable product change history synthesized from OpenSpec change records.
+
+- See **[[Changelog/Overview]]** for the chronological release and change history.
+
+---
+
+### 5. 📖 Guides & Technical Reference
+
+- **[[Guides/Developer-Onboarding|Developer Onboarding & Workflow Guide]]**: Multi-harness developer environment, OpenSpec lifecycle, and discipline.
+- **[[Guides/OpenSpec-Governance|OpenSpec Domain & Capability Governance]]**: Canonical governance rules from \`openspec/GOVERNANCE.md\`.
+- **[[Guides/OpenSpec-Schemas|OpenSpec Schemas & Syntax]]**: Formal artifact schemas from \`openspec/SCHEMAS.md\`.
+- **[[Reference/Domain-Catalog|Architectural Domain Catalog]]**: System bounded contexts and capabilities registered in \`openspec/domains.yaml\`.
+- **[[Reference/Configuration-Guide|Configuration Guide]]**: Centralized runtime settings, environment precedence, and secrets governance.
+- **[[Reference/Overview|Technical Reference Index]]**: Contracts and platform catalogs.
 
 ---
 
 ## 🏛️ System Domains & Capabilities
 
-`;
+${formatHomeDomainsList(domains, specsCatalog)}
 
-  if (domains.length === 0) {
-    content += '*No architectural domains declared yet in `openspec/domains.yaml`.*\n\n';
-  } else {
-    for (const domain of domains) {
-      content += `### ${domain.name}\n`;
-      if (domain.description) {
-        content += `*${domain.description}*\n\n`;
-      }
-      const domainSpecs = specsCatalog.filter(s => s.domain === domain.id);
-      if (domainSpecs.length === 0) {
-        content += '- *No specifications documented yet for this domain.*\n\n';
-      } else {
-        for (const spec of domainSpecs) {
-          content += `- **[[${spec.category}/${spec.fileName}|${spec.title}]]**: ${spec.purpose || 'Living behavioral specification'}\n`;
-        }
-        content += '\n';
-      }
-    }
-  }
-
-  content += `---
+---
 *Dynamically maintained by OpenSpec Documentation Sync. Run \`/opsx-sync-docs\` (or \`/opsx:sync-docs\`) to refresh.*
 `;
+}
 
-  return content;
+function formatHomeDomainsList(domains, specsCatalog) {
+  if (domains.length === 0) {
+    return '*No architectural domains declared yet in `openspec/domains.yaml`.*\n';
+  }
+  let out = '';
+  for (const domain of domains) {
+    out += `### ${domain.name}\n`;
+    if (domain.description) {
+      out += `*${domain.description}*\n\n`;
+    }
+    const domainSpecs = specsCatalog.filter(s => s.domain === domain.id);
+    if (domainSpecs.length === 0) {
+      out += '- *No specifications documented yet for this domain.*\n\n';
+    } else {
+      for (const spec of domainSpecs) {
+        out += `- **[[Features/${spec.fileName}|${spec.title}]]**: ${spec.purpose || 'Living behavioral specification'}\n`;
+      }
+      out += '\n';
+    }
+  }
+  return out;
 }
 
 // Build Domain Catalog Reference
 function buildDomainCatalog(domains, specsCatalog) {
   let content = `---
 title: "Domain Catalog"
+description: "Canonical architectural boundaries and capabilities registered in openspec/domains.yaml."
 type: reference
-last_synced: "${new Date().toISOString()}"
 tags:
   - reference
   - architecture
@@ -2074,7 +2838,7 @@ Canonical architectural boundaries registered in \`openspec/domains.yaml\`.
     } else {
       for (const cap of domain.capabilities) {
         const specMatch = specsCatalog.find(s => s.domain === domain.id && s.capability === cap.id);
-        const link = specMatch ? `[[${specMatch.category}/${specMatch.fileName}|${toTitleCase(cap.id)}]]` : `\`${cap.id}\``;
+        const link = specMatch ? `[[Features/${specMatch.fileName}|${toTitleCase(cap.id)}]]` : `\`${cap.id}\``;
         content += `- **${link}**: ${cap.description || 'System capability'}\n`;
       }
       content += '\n';
@@ -2112,6 +2876,7 @@ function sync() {
 
   // 2. Scan Project Metadata from Codebase, Manifests & AST Catalog
   const projectMeta = scanProjectMetadata(REPO_ROOT, codebaseSnapshot.astCatalog);
+  const overviewLandingPath = path.join(DOCS_DIR, 'Overview', 'Overview.md');
   const productOverviewPath = path.join(DOCS_DIR, 'Overview', 'Product-Overview.md');
   const systemArchPath = path.join(DOCS_DIR, 'Overview', 'System-Architecture.md');
 
@@ -2121,20 +2886,22 @@ function sync() {
   const domainsChanged = FORCE_REBUILD || state.domainsHash !== domainsHash;
   const domains = parseDomainsYaml(domainsContent);
 
-  // 4. Update Product Overview & System Architecture if AST symbols or codebase changed
-  const overviewNeedsUpdate = codebaseChanged || !fs.existsSync(productOverviewPath) || !fs.existsSync(systemArchPath);
+  // 4. Update Overview Landing, Product Overview & System Architecture
+  const overviewNeedsUpdate = codebaseChanged || !fs.existsSync(productOverviewPath) || !fs.existsSync(systemArchPath) || !fs.existsSync(overviewLandingPath);
   if (overviewNeedsUpdate) {
     if (VERBOSE) console.log('[Sync] Updating dynamic project overviews (WHAT, HOW, and WHY) from AST symbols');
+    const landingContent = formatOverviewLanding(projectMeta, domains);
     const overviewContent = formatProductOverview(projectMeta);
     const archContent = formatSystemArchitecture(projectMeta, domains);
 
     if (!DRY_RUN) {
+      fs.writeFileSync(overviewLandingPath, landingContent, 'utf8');
       fs.writeFileSync(productOverviewPath, overviewContent, 'utf8');
       fs.writeFileSync(systemArchPath, archContent, 'utf8');
     }
     state.codebaseHash = codebaseSnapshot.hash;
     state.astHash = codebaseSnapshot.astHash;
-    updatedFilesCount += 2;
+    updatedFilesCount += 3;
   }
 
   // 5. Discover living specs
@@ -2207,7 +2974,21 @@ function sync() {
     updatedFilesCount++;
   }
 
-  // 6. Update Domain Catalog
+  // 6. Update Features Overview & Feature Template
+  const featuresOverviewPath = path.join(DOCS_DIR, 'Features', 'Overview.md');
+  const featuresContent = buildFeaturesOverview(domains, specsCatalog);
+  const featuresHash = computeHash(featuresContent);
+  if (FORCE_REBUILD || state.featuresHash !== featuresHash || !fs.existsSync(featuresOverviewPath)) {
+    if (VERBOSE) console.log('[Sync] Updating Features Overview');
+    if (!DRY_RUN) {
+      fs.writeFileSync(featuresOverviewPath, featuresContent, 'utf8');
+    }
+    state.featuresHash = featuresHash;
+    updatedFilesCount++;
+  }
+  writeFeatureTemplate();
+
+  // 7. Update Domain Catalog
   const domainCatalogPath = path.join(DOCS_DIR, 'Reference', 'Domain-Catalog.md');
   if (domainsChanged || FORCE_REBUILD || !fs.existsSync(domainCatalogPath)) {
     if (VERBOSE) console.log('[Sync] Updating Domain Catalog');
@@ -2219,16 +3000,52 @@ function sync() {
     updatedFilesCount++;
   }
 
-  // 7. Synchronize Governance & Schemas guides
+  // 8. Update Reference Overview & Configuration Guide
+  const refOverviewPath = path.join(DOCS_DIR, 'Reference', 'Overview.md');
+  const refOverviewContent = buildReferenceOverview();
+  const refHash = computeHash(refOverviewContent);
+  if (FORCE_REBUILD || state.refHash !== refHash || !fs.existsSync(refOverviewPath)) {
+    if (VERBOSE) console.log('[Sync] Updating Reference Overview');
+    if (!DRY_RUN) {
+      fs.writeFileSync(refOverviewPath, refOverviewContent, 'utf8');
+    }
+    state.refHash = refHash;
+    updatedFilesCount++;
+  }
+  writeConfigurationGuide();
+
+  // 9. Synchronize Governance & Schemas guides
   updatedFilesCount = syncFrameworkGuides(state, updatedFilesCount);
 
-  // 8. Synchronize ADRs
+  // 10. Synchronize ADRs & Decisions Overview
   updatedFilesCount = processAdrs(state, updatedFilesCount);
+  const decisionsOverviewPath = path.join(DOCS_DIR, 'Decisions', 'Overview.md');
+  const decisionsContent = buildDecisionsOverview();
+  const decisionsHash = computeHash(decisionsContent);
+  if (FORCE_REBUILD || state.decisionsHash !== decisionsHash || !fs.existsSync(decisionsOverviewPath)) {
+    if (VERBOSE) console.log('[Sync] Updating Decisions Overview');
+    if (!DRY_RUN) {
+      fs.writeFileSync(decisionsOverviewPath, decisionsContent, 'utf8');
+    }
+    state.decisionsHash = decisionsHash;
+    updatedFilesCount++;
+  }
 
-  // 9. Synchronize Archived Changes
+  // 11. Synchronize Archived Changes & Changelog Overview
   updatedFilesCount = processArchivedChanges(state, updatedFilesCount);
+  const changelogOverviewPath = path.join(DOCS_DIR, 'Changelog', 'Overview.md');
+  const changelogContent = buildChangelogOverview();
+  const changelogHash = computeHash(changelogContent);
+  if (FORCE_REBUILD || state.changelogHash !== changelogHash || !fs.existsSync(changelogOverviewPath)) {
+    if (VERBOSE) console.log('[Sync] Updating Changelog Overview');
+    if (!DRY_RUN) {
+      fs.writeFileSync(changelogOverviewPath, changelogContent, 'utf8');
+    }
+    state.changelogHash = changelogHash;
+    updatedFilesCount++;
+  }
 
-  // 10. Update Home MOC
+  // 12. Update Home MOC & Vault README
   const homePath = path.join(DOCS_DIR, 'Home.md');
   const homeContent = buildHomeMoc(projectMeta, domains, specsCatalog);
   const homeHash = computeHash(homeContent);
@@ -2241,10 +3058,19 @@ function sync() {
     state.homeHash = homeHash;
     updatedFilesCount++;
   }
+  writeVaultReadme();
 
-  // 11. Persist State Manifest
+  // 13. Persist State Manifest
   if (!DRY_RUN && updatedFilesCount > 0) {
     saveState(state);
+  }
+
+  // 14. Execute Automated Vault Integrity & Expressiveness Quality Gate
+  if (!DRY_RUN) {
+    const integrityResult = verifyVault(DOCS_DIR);
+    if (!integrityResult.success) {
+      console.error('⚠️  Warning: Vault integrity check reported issues. Please review above.');
+    }
   }
 
   if (updatedFilesCount === 0) {

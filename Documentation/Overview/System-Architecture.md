@@ -1,8 +1,8 @@
 ---
 title: "System Architecture"
+description: "System architecture, multi-harness instruction projection, execution lifecycles, and component topology for ai-scaffolding."
 type: architecture
 project: "ai-scaffolding"
-last_synced: "2026-11-02T22:51:46.030Z"
 tags:
   - architecture
   - system-design

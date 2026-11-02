@@ -1,8 +1,8 @@
 ---
 title: "Product Overview"
+description: "Executive summary, system mission, target personas, and core capabilities of ai-scaffolding."
 type: overview
 project: "ai-scaffolding"
-last_synced: "2026-11-02T22:51:46.030Z"
 tags:
   - overview
   - product

@@ -43,6 +43,7 @@ coverage/
 
 # Documentation sync local state cache
 Documentation/.sync-state.json
+Documentation/.vault-sync-state.json
 
 # Scratch output from vendored skills (brainstorming sessions, plan workspaces)
 .superpowers/

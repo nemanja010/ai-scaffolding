@@ -1,7 +1,7 @@
 ---
 title: "Domain Catalog"
+description: "Canonical architectural boundaries and capabilities registered in openspec/domains.yaml."
 type: reference
-last_synced: "2026-11-02T22:51:46.031Z"
 tags:
   - reference
   - architecture

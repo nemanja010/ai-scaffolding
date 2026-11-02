@@ -1,7 +1,7 @@
 ---
 title: "OpenSpec Schemas"
+description: "Syntax and schema specification for OpenSpec changes, delta specs, and task tracking."
 type: guide
-last_synced: "2026-11-02T22:51:46.032Z"
 tags:
   - guide
   - schemas

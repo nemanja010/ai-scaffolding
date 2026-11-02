@@ -1,7 +1,7 @@
 ---
 title: "OpenSpec Governance"
+description: "Governance model for architectural domains, capabilities, and living specifications."
 type: guide
-last_synced: "2026-11-02T22:51:46.031Z"
 tags:
   - guide
   - governance
