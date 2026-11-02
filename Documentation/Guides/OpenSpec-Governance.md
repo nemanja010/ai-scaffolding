@@ -1,13 +1,17 @@
 ---
-title: "OpenSpec Domain & Capability Governance"
+title: "OpenSpec Governance"
 type: guide
-source: "openspec/GOVERNANCE.md"
-last_synced: "2026-11-02T15:13:53.477Z"
+last_synced: "2026-11-02T22:06:32.806Z"
 tags:
-  - guides
-  - openspec
+  - guide
   - governance
+  - openspec
 ---
+
+# OpenSpec Lifecycle & Domain Governance
+
+> [!NOTE] Framework Reference
+> Synced from `openspec/GOVERNANCE.md`.
 
 # OpenSpec Domain & Capability Governance
 
@@ -175,4 +179,4 @@ To prevent semantic drift across code, specifications, and architecture decision
 
 
 ---
-[[Home|← Back to Home]] | [[Guides/Developer-Onboarding|Onboarding Guide]]
+[[Home|← Back to Home]] | [[Guides/OpenSpec-Schemas|OpenSpec Schemas →]]

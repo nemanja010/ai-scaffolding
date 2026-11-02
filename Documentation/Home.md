@@ -1,15 +1,15 @@
-# Documentation Vault
+# Documentation Vault: AI Scaffolding
 
-Welcome to the product and architecture documentation. This knowledge base is dynamically synchronized from living specifications, architectural models, and OpenSpec change records.
+Welcome to the comprehensive product and architecture documentation for **AI Scaffolding** (Software Application). This knowledge base is dynamically synchronized from AST symbol registries, codebase snapshots, living behavior specifications, and OpenSpec change records.
 
 ## 🧭 Map of Content (MOC)
 
 | Section | Focus | Quick Link |
 | :--- | :--- | :--- |
-| **Product Overview** | System vision, actors, and principles | [[Overview/Product-Overview\|Read Overview]] |
-| **System Architecture** | Architecture context and component structure | [[Overview/System-Architecture\|View Architecture]] |
-| **Features & Capabilities** | Functional capabilities and acceptance scenarios | [[Features/Overview\|Explore Features]] |
-| **Developer Guides** | Setup, onboarding, governance, and schemas | [[Guides/Developer-Onboarding\|Onboarding]] · [[Guides/OpenSpec-Governance\|Governance]] · [[Guides/OpenSpec-Schemas\|Schemas]] |
+| **Product Overview** | The "WHAT": Vision, purpose, user journeys, and capabilities | [[Overview/Product-Overview\|Read Product Overview]] |
+| **System Architecture** | The "HOW" & "WHY": Architecture model, lifecycle diagrams, and design trade-offs | [[Overview/System-Architecture\|View System Architecture]] |
+| **Features & Capabilities** | Living behavioral specifications and Gherkin scenarios | [[Features/Overview\|Explore Features]] |
+| **Developer Guides** | Practical onboarding, lifecycle governance, and schemas | [[Guides/Developer-Onboarding\|Onboarding]] · [[Guides/OpenSpec-Governance\|Governance]] · [[Guides/OpenSpec-Schemas\|Schemas]] |
 | **Technical Reference** | Configuration, domain catalog, and contracts | [[Reference/Overview\|View Reference]] |
 | **Architectural Decisions** | Durable decision records (ADRs) | [[Decisions/Overview\|Browse ADRs]] |
 | **Product Changelog** | Release history and archived changes | [[Changelog/Overview\|View Changelog]] |

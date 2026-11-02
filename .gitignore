@@ -35,6 +35,10 @@ coverage/
 # Agent scratch workspaces
 .agent-workspace/*/active-task.md
 .agent-workspace/*/history/*
+.agent-workspace/*.xml
+.agent-workspace/*.json
+.agent-workspace/codebase-summary.xml
+.agent-workspace/ast-symbols.json
 !.agent-workspace/**/.keep
 
 # Scratch output from vendored skills (brainstorming sessions, plan workspaces)

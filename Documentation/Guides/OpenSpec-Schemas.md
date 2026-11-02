@@ -1,13 +1,17 @@
 ---
-title: "OpenSpec Schema Mechanics & Workflows"
+title: "OpenSpec Schemas"
 type: guide
-source: "openspec/SCHEMAS.md"
-last_synced: "2026-11-02T15:13:53.478Z"
+last_synced: "2026-11-02T22:06:32.807Z"
 tags:
-  - guides
-  - openspec
+  - guide
   - schemas
+  - openspec
 ---
+
+# OpenSpec Artifact Schemas & Syntax
+
+> [!NOTE] Framework Reference
+> Synced from `openspec/SCHEMAS.md`.
 
 # OpenSpec Schemas Architecture & Customization Guide
 
@@ -217,4 +221,4 @@ A core architectural advantage of OpenSpec is that **schemas live strictly in re
 
 
 ---
-[[Home|← Back to Home]] | [[Guides/Developer-Onboarding|Onboarding Guide]]
+[[Home|← Back to Home]] | [[Guides/OpenSpec-Governance|← OpenSpec Governance]]

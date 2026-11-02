@@ -1,7 +1,7 @@
 ---
 title: "Domain Catalog"
 type: reference
-last_synced: "2026-11-02T15:13:53.481Z"
+last_synced: "2026-11-02T22:06:32.806Z"
 tags:
   - reference
   - architecture
@@ -18,9 +18,7 @@ Foundational infrastructure, storage abstractions, configuration, and security s
 
 ### Capabilities
 
-- **`configuration-management`**: Application configuration, environment profiles, and dynamic property resolution
-- **`data-persistence`**: Data access layer, unit of work, repository patterns, and schema migrations
-- **`identity-access`**: Authentication, authorization, role-based access control, and session lifecycle
+*No capabilities declared.*
 
 ## API & Backend Services (`api-services`)
 
@@ -28,8 +26,7 @@ RESTful endpoints, external API gateways, and asynchronous event messaging pipel
 
 ### Capabilities
 
-- **`service-endpoints`**: REST/HTTP controllers, request validation, serialization, and status negotiation
-- **`event-messaging`**: Event publishing, pub/sub topics, message queues, and async worker dispatch
+*No capabilities declared.*
 
 ## Web Client Applications (`web-client`)
 
@@ -37,8 +34,7 @@ Frontend single-page applications, UI component libraries, and client-side state
 
 ### Capabilities
 
-- **`app-shell`**: Root navigation, routing, layout containers, and application initialization
-- **`ui-components`**: Reusable design system components, forms, feedback dialogs, and tabular views
+*No capabilities declared.*
 
 ---
 [[Home|← Back to Home]] | [[Reference/Overview|Reference Index]]
