@@ -1,6 +1,6 @@
-# Documentation Vault: AI Scaffolding
+# Documentation Vault: ai-scaffolding
 
-Welcome to the comprehensive product and architecture documentation for **AI Scaffolding** (Software Application). This knowledge base is dynamically synchronized from AST symbol registries, codebase snapshots, living behavior specifications, and OpenSpec change records.
+Welcome to the comprehensive product and architecture documentation for **ai-scaffolding** (Software Application). This knowledge base is dynamically synchronized from AST symbol registries, codebase snapshots, living behavior specifications, and OpenSpec change records.
 
 ## 🧭 Map of Content (MOC)
 

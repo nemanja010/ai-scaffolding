@@ -147,15 +147,19 @@ function detectFileAstSymbols(content, ext, relPath) {
   };
 
   // 1. HTTP Endpoints
+  // 1. HTTP Endpoints across ecosystems
   const routePatterns = [
     /(?:app|router)\.(get|post|put|delete|patch)\s*\(\s*["'`]([^"'`]+)["'`]/gi,
     /@(?:app|router)\.(get|post|put|delete|patch)\s*\(\s*["'`]([^"'`]+)["'`]/gi,
-    /http\.HandleFunc\s*\(\s*["'`]([^"'`]+)["'`]/gi
+    /http\.HandleFunc\s*\(\s*["'`]([^"'`]+)["'`]/gi,
+    /\.(?:GET|POST|PUT|DELETE|PATCH)\s*\(\s*["'`]([^"'`]+)["'`]/g, // Gin / Fiber
+    /\.route\s*\(\s*["'`]([^"'`]+)["'`]/gi, // Axum / Actix
+    /@(?:GetMapping|PostMapping|RequestMapping|HttpGet|HttpPost|HttpDelete|HttpPut)\s*\(\s*["'`]([^"'`]+)["'`]/gi // Spring / ASP.NET
   ];
   for (const pat of routePatterns) {
     const matches = content.matchAll(pat);
     for (const m of matches) {
-      const method = (m[1] || 'GET').toUpperCase();
+      const method = (m[1] || 'HTTP').toUpperCase();
       const routePath = m[2] || m[1];
       if (!symbols.endpoints.some(ep => ep.method === method && ep.path === routePath)) {
         symbols.endpoints.push({ file: relPath, method, path: routePath });
@@ -163,13 +167,19 @@ function detectFileAstSymbols(content, ext, relPath) {
     }
   }
 
-  // 2. Entrypoints & Server Listeners
-  const portMatch = content.match(/\.(?:listen|run|serve)\s*\(\s*(\d{2,5})/i);
+  // 2. Entrypoints & Server Listeners across languages
+  const portMatch = content.match(/\.(?:listen|run|serve)\s*\(\s*(\d{2,5})|http\.ListenAndServe\s*\(\s*["'](?::)?(\d{2,5})/i);
   if (portMatch) {
-    symbols.entrypoints.push({ file: relPath, type: 'HTTP Listener', target: `Port ${portMatch[1]}` });
+    const port = portMatch[1] || portMatch[2];
+    symbols.entrypoints.push({ file: relPath, type: 'HTTP Listener', target: `Port ${port}` });
   }
-  if (/func\s+main\s*\(\s*\)|fn\s+main\s*\(\s*\)|def\s+main\s*\(\s*\)|if\s+__name__\s*==\s*['"]__main__['"]|function\s+main\s*\(/.test(content)) {
+  // Universal Main Functions (Rust, Go, Python, C, C++, Java, C#, JS)
+  if (/func\s+main\s*\(\s*\)|fn\s+main\s*\(\s*\)|def\s+main\s*\(\s*\)|if\s+__name__\s*==\s*['"]__main__['"]|function\s+main\s*\(|(?:int|void|public\s+static\s+void)\s+main\s*\(/.test(content)) {
     symbols.entrypoints.push({ file: relPath, type: 'Application Entrypoint', target: 'main()' });
+  }
+  // Frontend & Client App Bootstrap
+  if (/bootstrapApplication\s*\(|platformBrowserDynamic\(\)\.bootstrapModule\s*\(|createRoot\s*\(|createApp\s*\(|ReactDOM\.render\s*\(/.test(content)) {
+    symbols.entrypoints.push({ file: relPath, type: 'Application Entrypoint', target: 'Client App Bootstrap' });
   }
 
   // 3. Classes / Structs / Interfaces / Types
@@ -195,6 +205,21 @@ function detectFileAstSymbols(content, ext, relPath) {
         else if (m[0].includes('type ')) kind = 'type';
         symbols.entities.push({ file: relPath, name, kind });
       }
+    }
+  }
+
+  // Angular Decorators & Components
+  const ngCompMatches = content.matchAll(/@Component\s*\(\s*\{[\s\S]*?selector:\s*['"]([^'"]+)['"]/g);
+  for (const m of ngCompMatches) {
+    const compSelector = `<${m[1]}>`;
+    if (!symbols.entities.some(e => e.name === compSelector)) {
+      symbols.entities.push({ file: relPath, name: compSelector, kind: 'angular component' });
+    }
+  }
+  const ngSvcMatches = content.matchAll(/@Injectable\s*\([\s\S]*?\)\s*(?:export\s+)?class\s+([a-zA-Z0-9_]+)/g);
+  for (const m of ngSvcMatches) {
+    if (!symbols.entities.some(e => e.name === m[1])) {
+      symbols.entities.push({ file: relPath, name: m[1], kind: 'angular service' });
     }
   }
 
@@ -240,7 +265,7 @@ function scanCodebaseAstSymbols(repoRoot) {
   };
 
   function walk(dir, depth = 0) {
-    if (depth > 5) return;
+    if (depth > 10) return;
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const ent of entries) {
@@ -311,13 +336,22 @@ function analyzeSourceFile(fullPath, repoRoot) {
   };
 
   const language = langMap[ext] || 'Source Code';
+  const isAngular = /@Component|@Injectable|bootstrapApplication|provideRouter/.test(content);
   const hasMain = ast.entrypoints.length > 0 || ((ast.invariants.length > 0) && (!relPath.includes('/') || relPath.startsWith('src/index') || relPath.startsWith('src/main')));
-  const isServer = ast.endpoints.length > 0 || ast.entrypoints.some(e => e.type === 'HTTP Listener') || /express\(|FastAPI\(|Flask\(|http\.createServer/.test(content);
-  const isCli = /process\.argv|argparse|clap|commander|flag\.Parse|click\./.test(content);
+  const isServer = ast.endpoints.length > 0 || ast.entrypoints.some(e => e.type === 'HTTP Listener') || /express\(|FastAPI\(|Flask\(|http\.createServer|actix_web|axum|gin\.Default|fiber\.New|SpringApplication|WebApplication\.CreateBuilder/.test(content);
+  const isCli = /process\.argv|argparse|clap|commander|flag\.Parse|click\.|os\.Args|std::env::args|sys\.argv|Environment\.GetCommandLineArgs|getopt/.test(content);
 
   let summary = '';
   if (ast.docstring) {
     summary = ast.docstring;
+  } else if (isAngular && ast.entities.some(e => e.kind === 'angular component')) {
+    const compNames = ast.entities.filter(e => e.kind === 'angular component').map(e => e.name).join(', ');
+    summary = `Angular Component rendering ${compNames}`;
+  } else if (isAngular && ast.entities.some(e => e.kind === 'angular service')) {
+    const svcNames = ast.entities.filter(e => e.kind === 'angular service').map(e => `\`${e.name}\``).join(', ');
+    summary = `Angular Service providing ${svcNames}`;
+  } else if (hasMain && /bootstrapApplication/.test(content)) {
+    summary = 'Angular standalone client application bootstrap entrypoint';
   } else if (isServer) {
     const epCount = ast.endpoints.length;
     summary = `HTTP service exposing ${epCount > 0 ? `${epCount} endpoint(s)` : 'API routes'}`;
@@ -346,6 +380,7 @@ function analyzeSourceFile(fullPath, repoRoot) {
     hasMain,
     isCli,
     isServer,
+    isAngular,
     summary
   };
 }
@@ -525,88 +560,171 @@ function scanProjectMetadata(repoRoot, astCatalog) {
     } catch {}
   }
 
-  // 2. Cargo.toml
+  // 2. Angular CLI Manifest (angular.json)
+  const ngPath = path.join(repoRoot, 'angular.json');
+  if (fs.existsSync(ngPath)) {
+    try {
+      const ngConfig = JSON.parse(fs.readFileSync(ngPath, 'utf8'));
+      meta.frameworks.add('Angular');
+      meta.manifests.push('angular.json');
+      if (ngConfig.projects) {
+        const projectNames = Object.keys(ngConfig.projects);
+        if (projectNames.length > 0) {
+          const firstProj = projectNames[0];
+          if (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding') {
+            meta.name = firstProj;
+          }
+          const projDef = ngConfig.projects[firstProj];
+          if (projDef && projDef.projectType === 'application') {
+            meta.type = 'Angular Client Application (Single-Page App)';
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Cargo.toml
   const cargoPath = path.join(repoRoot, 'Cargo.toml');
   if (fs.existsSync(cargoPath)) {
     try {
       const cargo = fs.readFileSync(cargoPath, 'utf8');
       const nameMatch = cargo.match(/name\s*=\s*["']([^"']+)["']/);
       const descMatch = cargo.match(/description\s*=\s*["']([^"']+)["']/);
-      if (nameMatch && meta.name === path.basename(repoRoot)) meta.name = nameMatch[1];
+      if (nameMatch && (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding')) meta.name = nameMatch[1];
       if (descMatch && !meta.description) meta.description = descMatch[1];
       meta.manifests.push('Cargo.toml');
       meta.languages['Rust'] = (meta.languages['Rust'] || 0) + 1;
     } catch {}
   }
 
-  // 3. pyproject.toml
+  // 4. pyproject.toml
   const pyprojPath = path.join(repoRoot, 'pyproject.toml');
   if (fs.existsSync(pyprojPath)) {
     try {
       const py = fs.readFileSync(pyprojPath, 'utf8');
       const nameMatch = py.match(/name\s*=\s*["']([^"']+)["']/);
       const descMatch = py.match(/description\s*=\s*["']([^"']+)["']/);
-      if (nameMatch && meta.name === path.basename(repoRoot)) meta.name = nameMatch[1];
+      if (nameMatch && (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding')) meta.name = nameMatch[1];
       if (descMatch && !meta.description) meta.description = descMatch[1];
       meta.manifests.push('pyproject.toml');
       meta.languages['Python'] = (meta.languages['Python'] || 0) + 1;
     } catch {}
   }
 
-  // 4. go.mod
+  // 5. go.mod
   const goModPath = path.join(repoRoot, 'go.mod');
   if (fs.existsSync(goModPath)) {
     try {
       const goMod = fs.readFileSync(goModPath, 'utf8');
       const modMatch = goMod.match(/^module\s+([^\s\r\n]+)/m);
-      if (modMatch && meta.name === path.basename(repoRoot)) meta.name = path.basename(modMatch[1]);
+      if (modMatch && (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding')) meta.name = path.basename(modMatch[1]);
       meta.manifests.push('go.mod');
       meta.languages['Go'] = (meta.languages['Go'] || 0) + 1;
     } catch {}
   }
 
-  // 5. Root README.md fallback
+  // 6. pom.xml / build.gradle (Java / Kotlin)
+  const pomPath = path.join(repoRoot, 'pom.xml');
+  if (fs.existsSync(pomPath)) {
+    try {
+      const pom = fs.readFileSync(pomPath, 'utf8');
+      const artMatch = pom.match(/<artifactId>([^<]+)<\/artifactId>/);
+      const nameMatch = pom.match(/<name>([^<]+)<\/name>/);
+      if (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding') {
+        meta.name = nameMatch ? nameMatch[1] : (artMatch ? artMatch[1] : meta.name);
+      }
+      meta.manifests.push('pom.xml');
+      meta.languages['Java'] = (meta.languages['Java'] || 0) + 1;
+    } catch {}
+  }
+
+  // 7. *.csproj / *.sln (.NET / C#)
+  try {
+    const csharpFiles = fs.readdirSync(repoRoot).filter(f => f.endsWith('.csproj') || f.endsWith('.sln'));
+    if (csharpFiles.length > 0) {
+      const mainCs = csharpFiles[0];
+      if (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding') {
+        meta.name = path.basename(mainCs, path.extname(mainCs));
+      }
+      meta.manifests.push(mainCs);
+      meta.languages['C#'] = (meta.languages['C#'] || 0) + 1;
+    }
+  } catch {}
+
+  // 8. CMakeLists.txt (C / C++)
+  const cmakePath = path.join(repoRoot, 'CMakeLists.txt');
+  if (fs.existsSync(cmakePath)) {
+    try {
+      const cmake = fs.readFileSync(cmakePath, 'utf8');
+      const projMatch = cmake.match(/project\s*\(\s*([^\s)]+)/i);
+      if (projMatch && (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding')) {
+        meta.name = projMatch[1];
+      }
+      meta.manifests.push('CMakeLists.txt');
+      meta.languages['C++'] = (meta.languages['C++'] || 0) + 1;
+    } catch {}
+  }
+
+  // 9. Root README.md fallback (Disambiguate template scaffold from user product)
   const readmePath = path.join(repoRoot, 'README.md');
+  let isTemplateReadme = false;
   if (fs.existsSync(readmePath)) {
     try {
       const readme = fs.readFileSync(readmePath, 'utf8');
-      const titleMatch = readme.match(/^#\s+(.+)$/m);
-      if (titleMatch && meta.name === path.basename(repoRoot)) {
-        meta.name = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+      if (/#\s*AI Scaffolding/i.test(readme) || /multi-harness AI engineering template/i.test(readme) || /A standardized, multi-harness/i.test(readme)) {
+        isTemplateReadme = true;
       }
-      if (!meta.description) {
-        const lines = readme.split(/\r?\n/);
-        let foundTitle = false;
-        let descLines = [];
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('# ')) {
-            foundTitle = true;
-            continue;
-          }
-          if (foundTitle) {
-            if (trimmed.startsWith('---') || trimmed.startsWith('## ')) break;
-            if (trimmed && !trimmed.startsWith('[')) descLines.push(trimmed);
-            else if (descLines.length > 0 && !trimmed) break;
-          }
+      if (!isTemplateReadme) {
+        const titleMatch = readme.match(/^#\s+(.+)$/m);
+        if (titleMatch && (meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding')) {
+          meta.name = titleMatch[1].replace(/<[^>]+>/g, '').trim();
         }
-        if (descLines.length > 0) meta.description = descLines.join(' ');
+        if (!meta.description) {
+          const lines = readme.split(/\r?\n/);
+          let foundTitle = false;
+          let descLines = [];
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('# ')) {
+              foundTitle = true;
+              continue;
+            }
+            if (foundTitle) {
+              if (trimmed.startsWith('---') || trimmed.startsWith('## ')) break;
+              if (trimmed && !trimmed.startsWith('[')) descLines.push(trimmed);
+              else if (descLines.length > 0 && !trimmed) break;
+            }
+          }
+          if (descLines.length > 0) meta.description = descLines.join(' ');
+        }
       }
     } catch {}
   }
 
-  // 6. Scan apps/
+  // 7. Scan apps/
   const appsDir = path.join(repoRoot, 'apps');
   if (fs.existsSync(appsDir)) {
     const entries = fs.readdirSync(appsDir, { withFileTypes: true });
     for (const ent of entries) {
       if (ent.isDirectory() && !ent.name.startsWith('.')) {
-        meta.apps.push(inspectModule(path.join(appsDir, ent.name), ent.name, 'Application / Service'));
+        const appModule = inspectModule(path.join(appsDir, ent.name), ent.name, 'Application / Service');
+        meta.apps.push(appModule);
+        // Check for app-level package.json / angular.json
+        const appPkgPath = path.join(appsDir, ent.name, 'package.json');
+        if (fs.existsSync(appPkgPath)) {
+          try {
+            const appPkg = JSON.parse(fs.readFileSync(appPkgPath, 'utf8'));
+            extractDependencies(appPkg, meta);
+            if ((meta.name === path.basename(repoRoot) || meta.name === 'ai-scaffolding') && appPkg.name) {
+              meta.name = appPkg.name;
+            }
+          } catch {}
+        }
       }
     }
   }
 
-  // 7. Scan libs/ or packages/
+  // 8. Scan libs/ or packages/
   const libsDir = fs.existsSync(path.join(repoRoot, 'libs')) 
     ? path.join(repoRoot, 'libs') 
     : (fs.existsSync(path.join(repoRoot, 'packages')) ? path.join(repoRoot, 'packages') : null);
@@ -619,7 +737,7 @@ function scanProjectMetadata(repoRoot, astCatalog) {
     }
   }
 
-  // 8. Scan src/ submodules if no apps/
+  // 9. Scan src/ submodules if no apps/
   const srcDir = path.join(repoRoot, 'src');
   if (fs.existsSync(srcDir) && meta.apps.length === 0) {
     const entries = fs.readdirSync(srcDir, { withFileTypes: true });
@@ -630,9 +748,9 @@ function scanProjectMetadata(repoRoot, astCatalog) {
     }
   }
 
-  // 9. Scan all source code files across codebase
+  // 10. Scan all source code files across codebase (deep scan up to depth 10)
   function scanDir(dir, depth = 0) {
-    if (depth > 4) return;
+    if (depth > 10) return;
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const ent of entries) {
@@ -660,28 +778,39 @@ function scanProjectMetadata(repoRoot, astCatalog) {
 
   scanDir(repoRoot, 0);
 
-  // 10. Synthesize Product Purpose and Feel from actual source code
+  // 11. Synthesize Product Purpose and Feel from actual source code
   const isTemplateLeftover = !meta.description || 
+    isTemplateReadme ||
     meta.description.includes('multi-harness AI engineering template') || 
     meta.description.includes('enterprise scaffold');
 
-  if (isTemplateLeftover && meta.sourceFiles.length > 0) {
-    const mainFile = meta.sourceFiles.find(f => f.hasMain) || meta.sourceFiles[0];
-    if (mainFile.outputs.some(o => /hello|welcome|start|hi/i.test(o))) {
-      meta.description = 'A demonstration and starter application greeting users and verifying runtime configuration.';
-    } else if (mainFile.isServer) {
-      meta.description = `An HTTP / web application listening on port ${mainFile.serverPorts.join(', ') || 'default'} that processes client requests.`;
-    } else if (mainFile.isCli) {
-      meta.description = 'A command-line interface (CLI) tool for local execution and automation.';
-    } else if (mainFile.doc) {
-      meta.description = mainFile.doc;
-    } else {
-      meta.description = `An application built in ${mainFile.language} that ${mainFile.summary.toLowerCase()}.`;
+  if (isTemplateLeftover) {
+    if (meta.frameworks.has('Angular')) {
+      meta.description = 'An interactive single-page web application built with Angular, utilizing modern standalone components and reactive architecture.';
+    } else if (meta.frameworks.has('React')) {
+      meta.description = 'An interactive client-side web application built with React, featuring component-driven UI architecture and state-managed workflows.';
+    } else if (meta.sourceFiles.length > 0) {
+      const mainFile = meta.sourceFiles.find(f => f.hasMain) || meta.sourceFiles[0];
+      if (mainFile.outputs.some(o => /hello|welcome|start|hi/i.test(o))) {
+        meta.description = 'A demonstration and starter application greeting users and verifying runtime configuration.';
+      } else if (mainFile.isServer) {
+        meta.description = `An HTTP / web application listening on port ${mainFile.serverPorts.join(', ') || 'default'} that processes client requests.`;
+      } else if (mainFile.isCli) {
+        meta.description = 'A command-line interface (CLI) tool for local execution and automation.';
+      } else if (mainFile.doc) {
+        meta.description = mainFile.doc;
+      } else {
+        meta.description = `An application built in ${mainFile.language} that ${mainFile.summary.toLowerCase()}.`;
+      }
     }
   }
 
-  // 11. Infer Architecture Type
-  if (meta.apps.length > 0 && meta.libs.length > 0) {
+  // 12. Infer Architecture Type
+  if (meta.frameworks.has('Angular')) {
+    meta.type = 'Angular Client Application (Single-Page App)';
+  } else if (meta.frameworks.has('React') || meta.frameworks.has('Vue')) {
+    meta.type = 'Frontend Web Application (SPA)';
+  } else if (meta.apps.length > 0 && meta.libs.length > 0) {
     meta.type = 'Full-Stack Monorepo (Applications & Shared Libraries)';
   } else if (meta.apps.length > 0) {
     meta.type = 'Multi-Service Monorepo';
@@ -711,10 +840,50 @@ function scanProjectMetadata(repoRoot, astCatalog) {
   return meta;
 }
 
+// Check if repo is the uninstantiated template itself
+function isTemplateScaffold(meta) {
+  const isTemplateName = meta.name.toLowerCase() === 'ai-scaffolding' || meta.name === 'AI Scaffolding';
+  const hasNoManifests = meta.manifests.length === 0;
+  const hasNoUserCode = meta.sourceFiles.length === 0 && 
+    (!meta.apps || meta.apps.length === 0) && 
+    (!meta.libs || meta.libs.length === 0) && 
+    (!meta.srcModules || meta.srcModules.length === 0);
+  return isTemplateName && hasNoManifests && hasNoUserCode;
+}
+
+// Classify project into universal architecture archetypes
+function resolveProjectArchetype(meta) {
+  const mainSource = meta.sourceFiles.find(f => f.hasMain) || meta.sourceFiles[0] || { relPath: 'src/main', isServer: false, isCli: false, outputs: [] };
+
+  if (meta.frameworks.includes('Angular') || meta.frameworks.includes('React') || meta.frameworks.includes('Vue') || meta.frameworks.includes('Svelte') || meta.frameworks.includes('Next.js')) {
+    return 'frontend-spa';
+  }
+  if (mainSource.isServer || meta.sourceFiles.some(f => f.isServer)) {
+    return 'backend-service';
+  }
+  if (mainSource.isCli || meta.sourceFiles.some(f => f.isCli)) {
+    return 'cli-tool';
+  }
+  if (meta.apps.length > 0 && meta.libs.length > 0) {
+    return 'monorepo';
+  }
+  const hasNoExecutableEntry = !mainSource.hasMain && !mainSource.isServer && !mainSource.isCli && !meta.sourceFiles.some(f => f.hasMain || f.isServer || f.isCli);
+  if (hasNoExecutableEntry && (meta.libs.length > 0 || meta.srcModules.length > 0 || meta.type.includes('Library') || meta.type.includes('Package') || meta.type.includes('Crate') || meta.astCatalog.entities.length > 0)) {
+    return 'shared-library';
+  }
+  if (meta.libs.length > 0 || meta.type.includes('Library') || meta.type.includes('Package') || meta.type.includes('Crate')) {
+    return 'shared-library';
+  }
+  if (meta.sourceFiles.length === 1) {
+    return 'single-file';
+  }
+  return 'general-application';
+}
+
 // Generate comprehensive Product Overview (The "WHAT")
 function formatProductOverview(meta) {
   // Scenario A: Template Repository itself
-  if (meta.sourceFiles.length === 0 && (!meta.apps || meta.apps.length === 0) && (!meta.libs || meta.libs.length === 0)) {
+  if (isTemplateScaffold(meta)) {
     return `---
 title: "Product Overview"
 type: overview
@@ -888,18 +1057,78 @@ ai-scaffolding/
     workflows += `*Run commands are defined by your project runtime and build tooling.*\n`;
   }
 
-  const mainSource = meta.sourceFiles.find(f => f.hasMain) || meta.sourceFiles[0];
-  const problemStatement = mainSource.isServer 
-    ? `Clients require a reliable network service to handle HTTP requests and process application logic.`
-    : (mainSource.isCli 
-      ? `Users require a fast, scriptable command-line utility for local terminal operations.`
-      : `The application provides a targeted functional capability verifying runtime environment and execution.`);
+  const archetype = resolveProjectArchetype(meta);
+  const mainSource = meta.sourceFiles.find(f => f.hasMain) || meta.sourceFiles[0] || { relPath: 'src/main', summary: 'Application entry point', isServer: false, isCli: false, outputs: [] };
 
-  const valueDelivered = mainSource.isServer
-    ? `- Exposes structured HTTP service endpoints on port ${mainSource.serverPorts.join(', ') || 'configured ports'}.\n- Decouples client interfaces from core business processing.`
-    : (mainSource.isCli
-      ? `- Provides scriptable CLI commands with terminal argument handling.\n- Automates tasks directly from shell environments.`
-      : `- Executes lightweight logic with zero unnecessary dependencies.\n- Verifies execution readiness and produces predictable outputs.`);
+  let problemStatement = '';
+  let valueDelivered = '';
+  let targetPersonas = '';
+  let journeyFlow = '';
+
+  switch (archetype) {
+    case 'frontend-spa':
+      problemStatement = 'End users require an intuitive, responsive client interface to interact with application features and visualize data directly in modern web browsers.';
+      valueDelivered = '- Delivers an interactive Single-Page Application (SPA) with seamless client-side routing.\n- Encapsulates view logic, reactive state, and presentation inside modular components.\n- Operates with zero full-page reloads, providing instant feedback and modern UI responsiveness.';
+      targetPersonas = '- **Web Consumers & Users**: Accessing rich UI features and navigating views through web browsers.\n- **Frontend Developers**: Extending standalone components, services, and reactive state.';
+      journeyFlow = `flowchart LR
+    User([End User / Browser]) --> Bootstrap["SPA Bootstrap (${mainSource.relPath})"]
+    Bootstrap --> RootComp["Root View Component"]
+    RootComp --> Routing["Client Routing & Views"]
+    Routing --> State["Reactive Services & State"]`;
+      break;
+
+    case 'backend-service':
+      problemStatement = 'Consuming clients and applications require a robust, scalable service to process business requests, enforce data contracts, and manage persistent domain state.';
+      valueDelivered = `- Exposes structured HTTP/REST service endpoints on port ${mainSource.serverPorts && mainSource.serverPorts.length > 0 ? mainSource.serverPorts.join(', ') : 'configured ports'}.\n- Decouples client presentation from core business rules and storage mechanisms.\n- Provides deterministic request validation and high-concurrency throughput.`;
+      targetPersonas = '- **Consuming Systems & APIs**: Dispatching HTTP requests and consuming service responses.\n- **Backend Engineers & SREs**: Monitoring service performance, error rates, and operational endpoints.';
+      journeyFlow = `flowchart LR
+    Client([HTTP Client / Gateway]) --> Listener["Network Service (${mainSource.relPath})"]
+    Listener --> Routing["Route Handlers & Validation"]
+    Routing --> Core["Domain Service Logic"]
+    Core --> Out["Structured Response (JSON)"]`;
+      break;
+
+    case 'cli-tool':
+      problemStatement = 'Developers, operators, and automation pipelines require a scriptable, low-overhead command-line utility for local terminal operations and unattended automated workflows.';
+      valueDelivered = '- Provides scriptable CLI commands with robust argument and flag validation.\n- Automates tasks directly from terminal environments with clear progress feedback.\n- Emits predictable stdout/stderr streams and standard exit status codes.';
+      targetPersonas = '- **Developers & DevOps**: Executing automation tasks, builds, or utilities directly from the shell.\n- **CI/CD Pipelines**: Running automated scripts in headless, non-interactive execution modes.';
+      journeyFlow = `flowchart LR
+    User([Terminal User / CI]) --> CLI["CLI Invocation (${mainSource.relPath})"]
+    CLI --> Parse["Flag & Argument Parsing"]
+    Parse --> Exec["Command Handler Execution"]
+    Exec --> Out["Terminal Output & Exit Code"]`;
+      break;
+
+    case 'shared-library':
+      problemStatement = 'Consuming applications and services require reusable, strongly-typed domain primitives, algorithms, or client bindings without duplicating core logic across multiple codebases.';
+      valueDelivered = '- Encapsulates pure domain algorithms and models behind clean, versioned public API contracts.\n- Promotes consistency and DRY architecture across consuming applications.\n- Thoroughly tested in complete isolation without external environment side-effects.';
+      targetPersonas = '- **Consuming Application Developers**: Importing library packages and invoking public interfaces.\n- **Platform Architects**: Maintaining reusable components across broader systems.';
+      journeyFlow = `flowchart LR
+    Host([Consuming Application]) --> API["Public API Exports (${meta.name})"]
+    API --> Modules["Internal Domain Modules & Primitives"]
+    Modules --> Result["Computed Result / Returned Types"]`;
+      break;
+
+    case 'monorepo':
+      problemStatement = 'Engineering teams need to manage interdependent applications, services, and shared libraries within a single repository while enforcing architectural boundaries.';
+      valueDelivered = '- Centralizes living specifications, change proposals, and governance across all applications.\n- Enables atomic cross-boundary refactoring between apps and shared libraries.\n- Eliminates redundant configuration and harmonizes build discipline.';
+      targetPersonas = '- **Full-Stack Engineers**: Developing features spanning frontend, backend, and domain libraries.\n- **Engineering Leads**: Governing architectural standards and shared module boundaries.';
+      journeyFlow = `flowchart LR
+    Users([Users & Consumers]) --> Apps["Applications (${meta.apps.map(a => a.name).join(', ')})"]
+    Apps --> Libs["Shared Libraries (${meta.libs.map(l => l.name).join(', ') || 'Shared Modules'})"]
+    Libs --> Core["Core Domain Contracts"]`;
+      break;
+
+    default:
+      problemStatement = 'The application executes targeted domain logic or verification routines to deliver a predictable computing outcome with minimal overhead.';
+      valueDelivered = '- Direct, lightweight execution with zero unnecessary dependencies.\n- Verifies execution readiness and produces deterministic outputs.\n- Simple to audit, test, and containerize.';
+      targetPersonas = '- **End Users & Operators**: Invoking the application or script directly.\n- **Automated Harnesses**: Executing tasks and verifying outputs.';
+      journeyFlow = `flowchart LR
+    User([User / Consumer]) --> Entry["${mainSource.relPath}"]
+    Entry --> Exec["Execute Core Logic"]
+    Exec --> Out["Produce Output / Response"]`;
+      break;
+  }
 
   return `---
 title: "Product Overview"
@@ -927,8 +1156,7 @@ ${problemStatement}
 ${valueDelivered}
 
 ### Target Personas & Consumers
-- **End Users & Operators**: Interacting directly with the application interface, CLI commands, or services.
-- **Consuming Systems**: Integrating with exposed outputs or service interfaces.
+${targetPersonas}
 
 ---
 
@@ -939,10 +1167,7 @@ ${astSections || meta.sourceFiles.slice(0, 6).map(sf => `- **\`${sf.relPath}\`**
 
 ## 🔄 Core Workflows & User Journeys
 \`\`\`mermaid
-flowchart LR
-    User([User / Consumer]) --> Entry["${mainSource.relPath}"]
-    Entry --> Exec["Execute Core Logic"]
-    Exec --> Out["Produce Output / Response"]
+${journeyFlow}
 \`\`\`
 
 ---
@@ -973,7 +1198,7 @@ ${workflows}
 // Generate comprehensive System Architecture (The "HOW" and "WHY")
 function formatSystemArchitecture(meta, domains) {
   // Scenario A: Template Repository itself
-  if (meta.sourceFiles.length === 0 && (!meta.apps || meta.apps.length === 0) && (!meta.libs || meta.libs.length === 0)) {
+  if (isTemplateScaffold(meta)) {
     return `---
 title: "System Architecture"
 type: architecture
@@ -1123,27 +1348,195 @@ System architecture aligns with the architectural domains declared in \`openspec
   }
 
   // Scenario B: Downstream user project
-  const mainSource = meta.sourceFiles.find(f => f.hasMain) || meta.sourceFiles[0];
-  let mm = 'flowchart TD\n';
-  mm += `    User([User / Consumer]) --> Entry["${mainSource.relPath}"]\n`;
-  if (mainSource.isServer) {
-    mm += `    Entry --> ServerMod["HTTP Service (Port ${mainSource.serverPorts.join(', ') || 'HTTP'})"]\n`;
-    mm += `    ServerMod --> Handlers["Request Handlers & Logic"]\n`;
-  } else if (mainSource.outputs.length > 0) {
-    mm += `    Entry --> Out["Console Output ('${mainSource.outputs[0]}')"]\n`;
-  } else {
-    mm += `    Entry --> AppCore["Core Processing Logic"]\n`;
-  }
+  const archetype = resolveProjectArchetype(meta);
+  const mainSource = meta.sourceFiles.find(f => f.hasMain) || meta.sourceFiles[0] || { relPath: 'src/main', summary: 'Application entry point', isServer: false, isCli: false, outputs: [], language: 'Source Code', lineCount: 10, functions: [], classes: [] };
+  let mm = '';
+  let seq = '';
 
-  let seq = 'sequenceDiagram\n    autonumber\n';
-  seq += `    actor User as User / Consumer\n`;
-  seq += `    participant Entry as ${mainSource.relPath}\n`;
-  seq += `    participant Core as Execution Logic\n`;
-  seq += `    participant Out as Output / Response\n`;
-  seq += `    User->>Entry: 1. Invocate application or send request\n`;
-  seq += `    Entry->>Core: 2. Process arguments or dispatch handler\n`;
-  seq += `    Core->>Out: 3. Render output or return status\n`;
-  seq += `    Out-->>User: 4. Complete execution lifecycle\n`;
+  switch (archetype) {
+    case 'frontend-spa':
+      mm = `flowchart TD
+    subgraph BrowserRuntime [Web Browser Client Runtime]
+        User([End User]) --> Viewport["Browser Viewport / DOM"]
+        Viewport --> AppRoot["Application Root Component"]
+        AppRoot --> Views["Feature Components & Templates"]
+        Views --> ReactiveState["Signals / Observables / State Services"]
+    end
+    subgraph HostEnvironment [Hosting & Network]
+        StaticHost["Static Web Server / CDN"] -.->|Serves Bundles| BrowserRuntime
+        ReactiveState -.->|Optional HTTP/REST| APIBackend["Backend Services / APIs"]
+    end\n`;
+
+      seq = `sequenceDiagram
+    autonumber
+    actor User as End User
+    participant Browser as Web Browser
+    participant Boot as Bootstrap (${mainSource.relPath})
+    participant UI as Component View
+    participant State as Reactive Service
+
+    User->>Browser: 1. Navigate to application URL
+    Browser->>Boot: 2. Load bundle & bootstrap application
+    Boot->>UI: 3. Render root template to DOM
+    UI-->>User: 4. Display interactive view
+    User->>UI: 5. Perform user interaction (click / input)
+    UI->>State: 6. Update signals / state
+    State-->>UI: 7. Reactive view update\n`;
+      break;
+
+    case 'backend-service':
+      mm = `flowchart TD
+    subgraph ExternalClients [Clients & Consuming Systems]
+        Client([HTTP Client / Frontend])
+        ThirdParty([External Webhooks])
+    end
+    subgraph ServiceBoundary [Service Runtime: ${meta.name}]
+        Gateway["HTTP Listener (${mainSource.serverPorts && mainSource.serverPorts.length > 0 ? mainSource.serverPorts.map(p => `Port ${p}`).join(', ') : 'HTTP/REST'})"]
+        Router["Route Dispatcher & Middleware"]
+        Handlers["Request Controllers / Handlers"]
+        Domain["Domain Services & Business Logic"]
+    end
+    subgraph DataStore [Persistence & Storage]
+        DB[(Database / Cache / State)]
+    end
+    Client & ThirdParty --> Gateway
+    Gateway --> Router
+    Router --> Handlers
+    Handlers --> Domain
+    Domain -.-> DB\n`;
+
+      seq = `sequenceDiagram
+    autonumber
+    actor Client as HTTP Client
+    participant Host as HTTP Listener (${mainSource.relPath})
+    participant Router as Router / Middleware
+    participant Handler as Route Handler
+    participant Domain as Domain Logic
+
+    Client->>Host: 1. Dispatch HTTP Request (Method + Path)
+    Host->>Router: 2. Parse request headers & match route
+    Router->>Handler: 3. Invoke controller handler
+    Handler->>Domain: 4. Execute business rules & persistence
+    Domain-->>Handler: 5. Return domain entity / state
+    Handler-->>Client: 6. Emit HTTP Response (JSON / Status)\n`;
+      break;
+
+    case 'cli-tool':
+      mm = `flowchart TD
+    subgraph ShellContext [User Shell Environment]
+        Terminal([Terminal / CI Shell])
+    end
+    subgraph CLIProcess [CLI Process: ${meta.name}]
+        Entry["Main Entrypoint (${mainSource.relPath})"]
+        Parser["Argument & Flag Parser"]
+        Dispatcher["Command Dispatcher"]
+        Action["Action Handler / Task Logic"]
+    end
+    subgraph OutputStreams [Terminal Streams]
+        Stdout([stdout: Result / Output])
+        Stderr([stderr: Errors / Logs])
+    end
+    Terminal --> Entry
+    Entry --> Parser
+    Parser --> Dispatcher
+    Dispatcher --> Action
+    Action --> Stdout & Stderr\n`;
+
+      seq = `sequenceDiagram
+    autonumber
+    actor User as Terminal User / Script
+    participant CLI as CLI Binary (${mainSource.relPath})
+    participant Parser as Arg / Flag Parser
+    participant Command as Command Handler
+    participant Output as Console Stream
+
+    User->>CLI: 1. Execute command with arguments & flags
+    CLI->>Parser: 2. Parse command options & validate syntax
+    Parser->>Command: 3. Dispatch to targeted command routine
+    Command->>Command: 4. Perform requested operation
+    Command->>Output: 5. Stream output / print summary
+    Output-->>User: 6. Process termination (Exit Code 0)\n`;
+      break;
+
+    case 'shared-library':
+      mm = `flowchart TD
+    subgraph ConsumerSpace [Consuming Application]
+        HostApp["Host Application / Service"]
+    end
+    subgraph LibraryBoundary [Library Package: ${meta.name}]
+        PublicAPI["Public API Contract / Exports (${mainSource.relPath})"]
+        CoreEngine["Domain Core & Calculations"]
+        Utils["Utility Primitives & Helpers"]
+    end
+    HostApp --> PublicAPI
+    PublicAPI --> CoreEngine
+    CoreEngine --> Utils\n`;
+
+      seq = `sequenceDiagram
+    autonumber
+    actor Host as Consuming Application
+    participant API as Public API (${mainSource.relPath})
+    participant Core as Library Core
+    participant Utils as Internal Primitives
+
+    Host->>API: 1. Import library symbol & invoke method
+    API->>Core: 2. Forward arguments to core domain routine
+    Core->>Utils: 3. Evaluate algorithms / transform data
+    Utils-->>Core: 4. Return intermediate representation
+    Core-->>Host: 5. Return typed domain result\n`;
+      break;
+
+    case 'monorepo':
+      mm = `flowchart TD
+    subgraph Ingress [Ingress & Consumers]
+        Users([Users / Systems])
+    end
+    subgraph MonorepoScope [Monorepo Workspace: ${meta.name}]
+        subgraph AppsTier [Applications (apps/)]
+            ${meta.apps.slice(0, 3).map(a => `App_${a.name}["${a.name}"]`).join('\n            ') || 'Apps["Deployable Services"]'}
+        end
+        subgraph LibsTier [Shared Libraries (libs/)]
+            ${meta.libs.slice(0, 3).map(l => `Lib_${l.name}["${l.name}"]`).join('\n            ') || 'Libs["Domain Libraries"]'}
+        end
+    end
+    Users --> AppsTier
+    AppsTier --> LibsTier\n`;
+
+      seq = `sequenceDiagram
+    autonumber
+    actor Client as Client / User
+    participant App as Application Service
+    participant Lib as Shared Domain Library
+
+    Client->>App: 1. Invocate application entry point
+    App->>Lib: 2. Invoke shared domain capability
+    Lib-->>App: 3. Return validated domain result
+    App-->>Client: 4. Emit coordinated response\n`;
+      break;
+
+    default:
+      mm = 'flowchart TD\n';
+      mm += `    User([User / Consumer]) --> Entry["${mainSource.relPath}"]\n`;
+      if (mainSource.isServer) {
+        mm += `    Entry --> ServerMod["HTTP Service (Port ${mainSource.serverPorts && mainSource.serverPorts.length > 0 ? mainSource.serverPorts.join(', ') : 'HTTP'})"]\n`;
+        mm += `    ServerMod --> Handlers["Request Handlers & Logic"]\n`;
+      } else if (mainSource.outputs && mainSource.outputs.length > 0) {
+        mm += `    Entry --> Out["Console Output ('${mainSource.outputs[0]}')"]\n`;
+      } else {
+        mm += `    Entry --> AppCore["Core Processing Logic"]\n`;
+      }
+
+      seq = 'sequenceDiagram\n    autonumber\n';
+      seq += `    actor User as User / Consumer\n`;
+      seq += `    participant Entry as ${mainSource.relPath}\n`;
+      seq += `    participant Core as Execution Logic\n`;
+      seq += `    participant Out as Output / Response\n`;
+      seq += `    User->>Entry: 1. Invocate application or send request\n`;
+      seq += `    Entry->>Core: 2. Process arguments or dispatch handler\n`;
+      seq += `    Core->>Out: 3. Render output or return status\n`;
+      seq += `    Out-->>User: 4. Complete execution lifecycle\n`;
+      break;
+  }
 
   let moduleDetails = '### Discovered Source Components\n';
   for (const sf of meta.sourceFiles.slice(0, 8)) {

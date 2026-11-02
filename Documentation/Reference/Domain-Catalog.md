@@ -1,7 +1,7 @@
 ---
 title: "Domain Catalog"
 type: reference
-last_synced: "2026-11-02T22:06:32.806Z"
+last_synced: "2026-11-02T22:51:46.031Z"
 tags:
   - reference
   - architecture

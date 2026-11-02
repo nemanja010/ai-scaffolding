@@ -1,7 +1,7 @@
 ---
 title: "OpenSpec Schemas"
 type: guide
-last_synced: "2026-11-02T22:06:32.807Z"
+last_synced: "2026-11-02T22:51:46.032Z"
 tags:
   - guide
   - schemas

@@ -1,14 +1,14 @@
 ---
 title: "System Architecture"
 type: architecture
-project: "AI Scaffolding"
-last_synced: "2026-11-02T22:06:32.805Z"
+project: "ai-scaffolding"
+last_synced: "2026-11-02T22:51:46.030Z"
 tags:
   - architecture
   - system-design
 ---
 
-# System Architecture: AI Scaffolding
+# System Architecture: ai-scaffolding
 
 ## 🏛️ The "HOW": Architectural Philosophy & Design
 The codebase operates under a **Multi-Harness AI Engineering Monorepo** architectural model. It decouples system specifications from implementation code, using a hub-and-spoke configuration model:

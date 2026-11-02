@@ -41,6 +41,9 @@ coverage/
 .agent-workspace/ast-symbols.json
 !.agent-workspace/**/.keep
 
+# Documentation sync local state cache
+Documentation/.sync-state.json
+
 # Scratch output from vendored skills (brainstorming sessions, plan workspaces)
 .superpowers/
 

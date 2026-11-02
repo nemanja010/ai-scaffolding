@@ -1,17 +1,17 @@
 ---
 title: "Product Overview"
 type: overview
-project: "AI Scaffolding"
-last_synced: "2026-11-02T22:06:32.804Z"
+project: "ai-scaffolding"
+last_synced: "2026-11-02T22:51:46.030Z"
 tags:
   - overview
   - product
 ---
 
-# Product Overview: AI Scaffolding
+# Product Overview: ai-scaffolding
 
 ## 🎯 Executive Summary
-**AI Scaffolding** is an enterprise-grade, multi-harness AI engineering scaffold and starter monorepo. It establishes a unified, specification-driven pair-programming workflow across all major AI coding assistants—**GitHub Copilot**, **OpenCode**, **Claude Code**, and **Google Antigravity CLI & IDE**—while maintaining a living, bidirectional product documentation vault in Obsidian.
+**ai-scaffolding** is an enterprise-grade, multi-harness AI engineering scaffold and starter monorepo. It establishes a unified, specification-driven pair-programming workflow across all major AI coding assistants—**GitHub Copilot**, **OpenCode**, **Claude Code**, and **Google Antigravity CLI & IDE**—while maintaining a living, bidirectional product documentation vault in Obsidian.
 
 ---
 
@@ -70,7 +70,7 @@ flowchart LR
 
 | Dimension | Details |
 | :--- | :--- |
-| **Project Name** | `AI Scaffolding` |
+| **Project Name** | `ai-scaffolding` |
 | **Architecture Model** | Multi-Harness AI Engineering Monorepo |
 | **Supported AI Harnesses** | GitHub Copilot, OpenCode, Claude Code, Antigravity |
 | **Specification Engine** | OpenSpec (Intent-Driven Schema) |
