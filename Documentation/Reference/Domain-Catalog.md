@@ -18,7 +18,9 @@ Foundational infrastructure, storage abstractions, configuration, and security s
 
 ### Capabilities
 
-*No capabilities declared.*
+- **`configuration-management`**: Application configuration, environment profiles, and dynamic property resolution
+- **`data-persistence`**: Data access layer, unit of work, repository patterns, and schema migrations
+- **`identity-access`**: Authentication, authorization, role-based access control, and session lifecycle
 
 ## API & Backend Services (`api-services`)
 
@@ -26,7 +28,8 @@ RESTful endpoints, external API gateways, and asynchronous event messaging pipel
 
 ### Capabilities
 
-*No capabilities declared.*
+- **`service-endpoints`**: REST/HTTP controllers, request validation, serialization, and status negotiation
+- **`event-messaging`**: Event publishing, pub/sub topics, message queues, and async worker dispatch
 
 ## Web Client Applications (`web-client`)
 
@@ -34,7 +37,8 @@ Frontend single-page applications, UI component libraries, and client-side state
 
 ### Capabilities
 
-*No capabilities declared.*
+- **`app-shell`**: Root navigation, routing, layout containers, and application initialization
+- **`ui-components`**: Reusable design system components, forms, feedback dialogs, and tabular views
 
 ---
 [[Home|← Back to Home]] | [[Reference/Overview|Reference Index]]

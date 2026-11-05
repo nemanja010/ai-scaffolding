@@ -21,9 +21,13 @@ All capability specifications in this vault follow the human-first layout illust
 | Feature / Capability Document | Domain | Key Workflows & Operational Invariants |
 | :--- | :--- | :--- |
 | **[[Features/Feature-Template|Feature Specification Template]]** | `template` | Standard layout illustrating human-readable workflow documentation without raw Gherkin. |
-| `core-platform` | `core-platform` | *No capabilities declared yet in domains.yaml.* |
-| `api-services` | `api-services` | *No capabilities declared yet in domains.yaml.* |
-| `web-client` | `web-client` | *No capabilities declared yet in domains.yaml.* |
+| `core-platform/configuration-management` | `core-platform` | Application configuration, environment profiles, and dynamic property resolution |
+| `core-platform/data-persistence` | `core-platform` | Data access layer, unit of work, repository patterns, and schema migrations |
+| `core-platform/identity-access` | `core-platform` | Authentication, authorization, role-based access control, and session lifecycle |
+| `api-services/service-endpoints` | `api-services` | REST/HTTP controllers, request validation, serialization, and status negotiation |
+| `api-services/event-messaging` | `api-services` | Event publishing, pub/sub topics, message queues, and async worker dispatch |
+| `web-client/app-shell` | `web-client` | Root navigation, routing, layout containers, and application initialization |
+| `web-client/ui-components` | `web-client` | Reusable design system components, forms, feedback dialogs, and tabular views |
 
 ---
 [[Home|← Back to Home]] | [[Overview/Overview|Architecture Overview →]]

@@ -1664,14 +1664,14 @@ function parseDomainsYaml(content) {
       }
 
       if (inCapabilities) {
-        const capIdMatch = line.match(/^ {6}-\\s+id:\s*["']?([^"']+)["']?\\s*$/);
+        const capIdMatch = line.match(/^ {6}-\s+id:\s*["']?([^"']+)["']?\s*$/);
         if (capIdMatch) {
           currentCap = { id: capIdMatch[1], description: '' };
           currentDomain.capabilities.push(currentCap);
           continue;
         }
 
-        const capDescMatch = line.match(/^ {8}description:\s*["']?([^"']+)["']?\\s*$/);
+        const capDescMatch = line.match(/^ {8}description:\s*["']?([^"']+)["']?\s*$/);
         if (capDescMatch && currentCap) {
           currentCap.description = capDescMatch[1];
           continue;
