@@ -5,21 +5,26 @@
  * Cross-platform (Windows, Linux, macOS, CI/Docker) with ZERO external dependencies.
  *
  * Validates:
- * 1. Every Markdown file in Documentation/ has valid YAML frontmatter (title, description, tags).
- * 2. Every Obsidian [[wikilink]] resolves to an existing vault target (0 broken links).
- * 3. Every topic page under Overview/, Features/, Guides/, Reference/, Decisions/, and Changelog/
- *    is indexed in Home.md or its section Overview.md.
+ * 1. Canonical Vault Structure: Strictly enforces the 6 canonical directories
+ *    (Overview/, Features/, Guides/, Reference/, Decisions/, Changelog/) and permitted root files.
+ * 2. Frontmatter: Every Markdown file has valid YAML frontmatter (title, description, tags).
+ * 3. Wikilinks: Every Obsidian [[wikilink]] resolves to an existing vault target (0 broken links).
  * 4. Architectural Expressiveness Gate: Documentation/Overview/Overview.md exists, and every document
  *    under Documentation/Overview/*.md contains at least one substantive Mermaid diagram.
+ * 5. Mermaid Syntax & AST Verification:
+ *    - Built-in zero-dependency syntax linter (unquoted edge labels, note semicolons, unquoted node pipes).
+ *    - Automated AST engine parser execution via validate-mermaid.mjs if available.
+ * 6. Index Reachability: Every topic page is indexed in Home.md or its section Overview.md.
  */
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 function findRepoRoot() {
   let curr = __dirname;
   while (curr !== path.dirname(curr)) {
-    if (fs.existsSync(path.join(curr, 'AGENTS.md')) || fs.existsSync(path.join(curr, '.git'))) {
+    if (fs.existsSync(path.join(curr, 'AGENTS.md')) || fs.existsSync(path.join(curr, '.git')) || fs.existsSync(path.join(curr, 'Documentation'))) {
       return curr;
     }
     curr = path.dirname(curr);
@@ -36,7 +41,7 @@ function verifyVault(vaultDirOverride) {
     return { success: false, errors: [`Vault directory not found at ${vaultPath}`] };
   }
 
-  // 1. Gather all .md files in the vault (excluding .obsidian)
+  // 1. Gather all .md files and asset files in the vault (excluding .obsidian and .git)
   const mdFiles = [];
   const assetFiles = [];
 
@@ -60,7 +65,38 @@ function verifyVault(vaultDirOverride) {
 
   walk(vaultPath);
 
-  // 2. Build set of available targets for [[wikilink]] resolution (case-insensitive)
+  // 2. Canonical Structure & Out-of-Place Files Gate
+  const structureErrors = [];
+  const allowedCanonicalDirs = new Set(['overview', 'features', 'guides', 'reference', 'decisions', 'changelog', '.obsidian']);
+  const allowedRootFiles = new Set(['home.md', 'readme.md', '.sync-state.json', '.vault-sync-state.json']);
+
+  const topLevelEntries = fs.readdirSync(vaultPath, { withFileTypes: true });
+  for (const entry of topLevelEntries) {
+    if (entry.name === '.git') continue;
+    const lowerName = entry.name.toLowerCase();
+    if (entry.isDirectory()) {
+      if (!allowedCanonicalDirs.has(lowerName)) {
+        structureErrors.push(`Non-canonical directory detected: Documentation/${entry.name}/. All vault documents must reside within canonical sections: Overview, Features, Guides, Reference, Decisions, Changelog.`);
+      }
+    } else if (entry.isFile()) {
+      if (!allowedRootFiles.has(lowerName)) {
+        structureErrors.push(`Out-of-place root file detected: Documentation/${entry.name}. Root of Documentation/ only permits Home.md, README.md, and .sync-state.json.`);
+      }
+    }
+  }
+
+  // Ensure every markdown file path starts with an allowed canonical directory or is an allowed root file
+  for (const filePath of mdFiles) {
+    const rel = path.relative(vaultPath, filePath).replace(/\\/g, '/');
+    if (rel.includes('/')) {
+      const topDir = rel.split('/')[0].toLowerCase();
+      if (!allowedCanonicalDirs.has(topDir)) {
+        structureErrors.push(`Out-of-place document: Documentation/${rel}. Directory '${rel.split('/')[0]}' is not a canonical vault section.`);
+      }
+    }
+  }
+
+  // 3. Build set of available targets for [[wikilink]] resolution (case-insensitive)
   const vaultTargets = new Set();
   const vaultRelPaths = new Set();
 
@@ -84,8 +120,9 @@ function verifyVault(vaultDirOverride) {
   const brokenLinks = [];
   const unindexedPages = [];
   const expressivenessErrors = [];
+  const mermaidErrors = [];
 
-  // Read Home.md
+  // Read Home.md for indexing check
   let homeContent = '';
   const homeCandidates = [path.join(vaultPath, 'Home.md'), path.join(vaultPath, 'HOME.md')];
   for (const hc of homeCandidates) {
@@ -106,7 +143,9 @@ function verifyVault(vaultDirOverride) {
     }
   });
 
-  // 3. Check Frontmatter and [[wikilinks]]
+  // 4. Check Frontmatter, Wikilinks, Mermaid Syntax, and Indexing
+  let totalDiagramsCount = 0;
+
   for (const filePath of mdFiles) {
     const rel = path.relative(vaultPath, filePath).replace(/\\/g, '/');
     const content = fs.readFileSync(filePath, 'utf8');
@@ -172,6 +211,62 @@ function verifyVault(vaultDirOverride) {
       }
     }
 
+    // Built-in Zero-Dependency Mermaid Syntax Linting
+    let inMermaid = false;
+    let mermaidStartLine = 0;
+    let isSequence = false;
+    let diagramLineCount = 0;
+
+    for (let lineNum = 1; lineNum <= lines.length; lineNum++) {
+      const line = lines[lineNum - 1];
+      const trimmed = line.trim();
+
+      if (!inMermaid) {
+        if (/^```mermaid\b/.test(trimmed)) {
+          inMermaid = true;
+          mermaidStartLine = lineNum;
+          isSequence = false;
+          diagramLineCount = 0;
+          totalDiagramsCount++;
+        }
+      } else {
+        if (/^```\s*$/.test(trimmed)) {
+          if (diagramLineCount === 0) {
+            mermaidErrors.push(`${rel}:${mermaidStartLine} : Empty Mermaid diagram block.`);
+          }
+          inMermaid = false;
+          continue;
+        }
+
+        diagramLineCount++;
+
+        if (/^sequenceDiagram\b/.test(trimmed)) {
+          isSequence = true;
+        }
+
+        // Check 1: Unquoted parentheses, slashes, or asterisks in edge label (e.g. -->|label (text)|)
+        const edgeMatch = line.match(/(?:-->|---|==>|-\.->)\s*\|([^"|\r\n]*)\|/);
+        if (edgeMatch) {
+          const edgeLabel = edgeMatch[1];
+          if (/[()/*]/.test(edgeLabel)) {
+            mermaidErrors.push(`${rel}:${lineNum} : Mermaid syntax error in diagram starting at line ${mermaidStartLine}. Unquoted special characters in edge label '|${edgeLabel}|'. Wrap the label in quotes (e.g. |"${edgeLabel}"|).`);
+          }
+        }
+
+        // Check 2: Semicolon inside a sequenceDiagram Note (prematurely terminates statement)
+        if (isSequence && /^\s*Note\s+(?:over|left of|right of)\s+[^:\r\n]+:\s*([^;\r\n]*;.*)$/i.test(trimmed)) {
+          mermaidErrors.push(`${rel}:${lineNum} : Mermaid syntax error in sequence diagram starting at line ${mermaidStartLine}. Semicolon ';' in Note text prematurely terminates statement. Replace ';' with '-' or remove it.`);
+        }
+
+        // Check 3: Unquoted pipe character inside square bracket node text (e.g. State[A | B])
+        const nodeMatch = trimmed.match(/^[A-Za-z0-9_-]+\[([^"\]\r\n]*\|[^"\]\r\n]*)\]/);
+        if (nodeMatch) {
+          const nodeLabel = nodeMatch[1];
+          mermaidErrors.push(`${rel}:${lineNum} : Mermaid syntax error in diagram starting at line ${mermaidStartLine}. Unquoted pipe '|' inside node text '[${nodeLabel}]'. Wrap the node label in quotes (e.g. ["${nodeLabel}"]).`);
+        }
+      }
+    }
+
     // Indexing validation
     const baseName = path.basename(filePath, '.md');
     const isRootDoc = /^(Home|HOME|README)\.md$/i.test(rel);
@@ -194,7 +289,7 @@ function verifyVault(vaultDirOverride) {
     }
   }
 
-  // 4. Architectural Expressiveness Gate
+  // 5. Architectural Expressiveness Gate
   const overviewIndexPath = path.join(vaultPath, 'Overview', 'Overview.md');
   if (!fs.existsSync(overviewIndexPath)) {
     expressivenessErrors.push('Documentation/Overview/Overview.md: Missing section landing page.');
@@ -211,15 +306,50 @@ function verifyVault(vaultDirOverride) {
     }
   }
 
+  // 6. AST Parser Validation via validate-mermaid.mjs (if present)
+  const mermaidValidatorScript = path.join(__dirname, 'validate-mermaid.mjs');
+  let astValidated = false;
+  if (fs.existsSync(mermaidValidatorScript)) {
+    try {
+      execSync(`node "${mermaidValidatorScript}"`, {
+        cwd: repoRoot,
+        stdio: 'pipe',
+        encoding: 'utf8'
+      });
+      astValidated = true;
+    } catch (err) {
+      if (err.status === 1) {
+        // Validation errors encountered
+        const output = (err.stdout || '') + '\n' + (err.stderr || '');
+        const parseMatches = output.matchAll(/\[MERMAID-PARSE\]\s+([^\r\n]+)/g);
+        for (const pm of parseMatches) {
+          mermaidErrors.push(pm[1]);
+        }
+        if (mermaidErrors.length === 0 && output.trim()) {
+          mermaidErrors.push(`Mermaid parse error: ${output.trim().split('\n')[0]}`);
+        }
+      } else if (err.status === 2) {
+        // Notice / skipped (mermaid or jsdom not loaded)
+      }
+    }
+  }
+
   // Reporting
   console.log(`\n======================================================`);
-  console.log(`🔍 Vault Integrity & Expressiveness Gate Report`);
+  console.log(`🔍 Vault Integrity, Structure & Expressiveness Report`);
   console.log(`📂 Vault Path: ${vaultPath}`);
-  console.log(`📄 Total Documents Scanned: ${mdFiles.length}`);
+  console.log(`📄 Documents Scanned: ${mdFiles.length} | Diagrams Scanned: ${totalDiagramsCount}`);
   console.log(`======================================================\n`);
 
+  if (structureErrors.length > 0) {
+    console.error(`❌ Structural & Out-of-Place Files Issues (${structureErrors.length}):`);
+    structureErrors.forEach(e => console.error(`   [STRUCT] ${e}`));
+  } else {
+    console.log(`✅ Canonical Structure: 100% compliant with 6 canonical sections (0 out-of-place files).`);
+  }
+
   if (frontmatterErrors.length > 0) {
-    console.error(`❌ Frontmatter Issues (${frontmatterErrors.length}):`);
+    console.error(`\n❌ Frontmatter Issues (${frontmatterErrors.length}):`);
     frontmatterErrors.slice(0, 15).forEach(e => console.error(`   [FM] ${e}`));
   } else {
     console.log(`✅ Frontmatter: 100% of documents have valid YAML frontmatter.`);
@@ -230,6 +360,13 @@ function verifyVault(vaultDirOverride) {
     brokenLinks.slice(0, 20).forEach(e => console.error(`   [LINK] ${e}`));
   } else {
     console.log(`✅ Wikilinks: 100% of Obsidian [[wikilinks]] resolve cleanly (0 broken links).`);
+  }
+
+  if (mermaidErrors.length > 0) {
+    console.error(`\n❌ Mermaid Diagram Syntax Issues (${mermaidErrors.length}):`);
+    mermaidErrors.slice(0, 20).forEach(e => console.error(`   [MERMAID] ${e}`));
+  } else {
+    console.log(`✅ Mermaid Diagrams: All ${totalDiagramsCount} diagrams passed syntax & parser validation${astValidated ? ' (AST engine confirmed)' : ''}.`);
   }
 
   if (expressivenessErrors.length > 0) {
@@ -246,27 +383,33 @@ function verifyVault(vaultDirOverride) {
     console.log(`✅ Index Reachability: All topic pages are indexed in Home.md or section Overviews.`);
   }
 
-  const hasFatalErrors = frontmatterErrors.length > 0 || brokenLinks.length > 0 || expressivenessErrors.length > 0;
+  const hasFatalErrors = structureErrors.length > 0 || frontmatterErrors.length > 0 || brokenLinks.length > 0 || mermaidErrors.length > 0 || expressivenessErrors.length > 0;
   if (hasFatalErrors) {
     console.error(`\n🚨 Vault Integrity Verification FAILED with fatal errors.\n`);
     return {
       success: false,
+      structureErrors,
       frontmatterErrors,
       brokenLinks,
+      mermaidErrors,
       expressivenessErrors,
       unindexedPages,
-      totalScanned: mdFiles.length
+      totalScanned: mdFiles.length,
+      totalDiagrams: totalDiagramsCount
     };
   }
 
   console.log(`\n🎉 Vault Integrity Verification PASSED cleanly!\n`);
   return {
     success: true,
+    structureErrors: [],
     frontmatterErrors: [],
     brokenLinks: [],
+    mermaidErrors: [],
     expressivenessErrors: [],
     unindexedPages,
-    totalScanned: mdFiles.length
+    totalScanned: mdFiles.length,
+    totalDiagrams: totalDiagramsCount
   };
 }
 

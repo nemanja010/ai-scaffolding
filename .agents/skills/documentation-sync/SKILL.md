@@ -1,6 +1,7 @@
 ---
 name: documentation-sync
-description: Synchronize OpenSpec living specifications, domain models, ADRs, and archived changes into an Obsidian-compatible product documentation vault under Documentation/. Use when updating product documentation, after archiving an OpenSpec change, or when invoked via /opsx-sync-docs or /opsx:sync-docs.
+description: Synchronize OpenSpec living specifications, domain models, ADRs, and archived changes into an Obsidian-compatible product documentation vault under Documentation/. Use when updating product documentation, after archiving an OpenSpec change, or when asked to 'update docs from specs', 'sync the vault', 'update documentation', or running /opsx-sync-docs, /opsx:sync-docs, /sync-docs, or /vault-sync.
+user-invocable: true
 ---
 
 # Documentation Sync Skill
@@ -11,7 +12,7 @@ Synchronize living behavior specifications (`openspec/specs/`), architectural do
 
 - After archiving an OpenSpec change (`/opsx-archive` or `/opsx:archive`) to update the changelog, refreshed capability notes, and ADR graphs.
 - When living specifications, domain boundaries, or application codebases are modified.
-- When an engineer or agent invokes `/opsx-sync-docs` or `/opsx:sync-docs`.
+- When an engineer or agent invokes `/opsx-sync-docs`, `/opsx:sync-docs`, `/sync-docs`, or `/vault-sync`.
 - When onboarding to a project (e.g. a newly cloned template, starter app, or mature codebase) to ensure documentation comprehensively familiarizes the reader with the product.
 
 ---
@@ -61,10 +62,12 @@ The vault is the accessible, high-level knowledge hub for the entire engineering
 
 5. **Automated Vault Integrity & Expressiveness Quality Gate**:
    - `verify-vault.cjs` (and `verify-vault-integrity.ps1`) automatically verifies:
-     - 100% of documents have valid YAML frontmatter (`title`, `description`, `tags`).
-     - 100% of Obsidian `[[wikilinks]]` resolve cleanly (0 broken links).
-     - 100% of topic pages are indexed in `Home.md` or section `Overview.md`.
-     - Architectural expressiveness pass: `Overview/Overview.md` exists and every document in `Overview/*.md` has a substantive Mermaid diagram.
+     - **Canonical Vault Structure**: Strictly enforces the 6 canonical directories (`Overview/`, `Features/`, `Guides/`, `Reference/`, `Decisions/`, `Changelog/`) with zero out-of-place files or non-canonical directories.
+     - **Frontmatter**: 100% of documents have valid YAML frontmatter (`title`, `description`, `tags`).
+     - **Wikilinks**: 100% of Obsidian `[[wikilinks]]` resolve cleanly (0 broken links).
+     - **Mermaid Diagram Validation**: All Mermaid diagrams pass both zero-dependency syntax heuristics (edge labels, sequence notes, node text, brackets) and AST engine parsing via `validate-mermaid.mjs`.
+     - **Architectural Expressiveness**: `Documentation/Overview/Overview.md` exists and every document in `Documentation/Overview/*.md` has a substantive Mermaid diagram.
+     - **Index Reachability**: 100% of topic pages are indexed in `Home.md` or section `Overview.md`.
 
 ---
 
@@ -100,43 +103,35 @@ Documentation/
 
 ---
 
-## Execution
+## Step-by-Step Workflow
 
-Run the synchronization engine using Node.js or PowerShell:
-
+### Step 1 — Check Delta & Synchronization Status
+Run the automated synchronizer in check mode or normal execution:
 ```bash
-# Normal incremental sync (uses AST symbol fingerprinting & Repomix snapshot)
 node .agents/skills/documentation-sync/scripts/sync-docs.cjs
-
-# Force full vault regeneration
-node .agents/skills/documentation-sync/scripts/sync-docs.cjs --force
-
-# Verbose output (displays discovered symbols, AST hash, and snapshot engine)
-node .agents/skills/documentation-sync/scripts/sync-docs.cjs --verbose
-
-# Run vault integrity & expressiveness verification independently
-node .agents/skills/documentation-sync/scripts/verify-vault.cjs
-
-# Run vault integrity verification via PowerShell
-powershell -ExecutionPolicy Bypass -File .\.agents\skills\documentation-sync\scripts\verify-vault-integrity.ps1
 ```
+*(or via PowerShell: `powershell -ExecutionPolicy Bypass -File .\.agents\skills\documentation-sync\scripts\verify-vault-integrity.ps1`)*
 
----
+### Step 2 — Synthesize Changes
+1. **Uncovered Codebase Assets**:
+   If new apps, libraries, services, or modules were introduced, update `Documentation/Overview/System-Architecture.md` and feature pages.
+2. **Pending OpenSpec Changes**:
+   - Ingest `proposal.md` -> Generate `Documentation/Changelog/[YYYY-MM-DD]-[Change].md` and index in `Changelog/Overview.md`.
+   - Ingest `specs/<domain>/<capability>/spec.md` -> Update feature narrative in `Documentation/Features/` (no raw Gherkin).
+   - Ingest `design.md` -> Update `Overview/System-Architecture.md` and `Reference/`.
+   - Ingest `adr.md` -> Create `Documentation/Decisions/ADR-NNNN-[Title].md` and update `Decisions/Overview.md`.
+3. **Out-of-Place Files & Non-Canonical Folders**:
+   Relocate any loose root files or non-canonical folders into the 6 canonical directories.
 
-## AI Agent Integration
+### Step 3 — Verify Vault Integrity & Expressiveness
+Run the verification engine:
+```bash
+node .agents/skills/documentation-sync/scripts/verify-vault.cjs
+```
+Verifies canonical structure, frontmatter, wikilinks, Mermaid diagrams, expressiveness, and index reachability.
 
-When invoked via slash command in any AI harness (`/opsx-sync-docs` or `/opsx:sync-docs`):
-1. **Execute the synchronizer**:
-   Run `node .agents/skills/documentation-sync/scripts/sync-docs.cjs`.
-2. **Grasp the entire codebase via AST symbols**:
-   Read `.agent-workspace/ast-symbols.json` (or `.agent-workspace/codebase-summary.xml`) and query MCP tools (`agent-lsp`, `codespelunker`) to gain an immediate, holistic understanding of all symbols, contracts, and entrypoints.
-3. **Verify Comprehensive Documentation (WHAT, HOW, and WHY)**:
-   - Inspect `Documentation/Overview/Overview.md`, `Documentation/Overview/Product-Overview.md`, and `Documentation/Overview/System-Architecture.md`.
-   - Ensure the documentation thoroughly familiarizes the reader with the product:
-     - Is the "WHAT" clear (problem, value, personas, capabilities, workflows)?
-     - Is the "HOW" clear (architectural style, component diagram, execution sequence diagram)?
-     - Is the "WHY" clear (design rationale, invariants, trade-off matrix)?
-4. **Confirm Vault Integrity**:
-   Verify that `verify-vault.cjs` reports 0 broken links, 100% valid frontmatter, and passes the expressiveness gate.
-5. **Report Status**:
-   Report the updated files and provide clickable links to `Documentation/Home.md` and the updated notes.
+### Step 4 — Report Synchronized State
+Inform the developer of:
+- Which feature and reference documents were updated.
+- Which ADRs and changelog entries were synchronized.
+- Confirmation that vault integrity and Mermaid validation passed cleanly.
